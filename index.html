@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>매매 프로젝트</title>
+<title>Fixfolio</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#eef0f4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101216" media="(prefers-color-scheme: dark)">
@@ -195,7 +195,7 @@ function pcard(p){const c=calc(p),pr=progress(p),ok=c.after>=0,j=juneInfo(p);
 
 function home(){const ps=sorted(),cs=ps.map(calc),T=k=>cs.reduce((a,c)=>a+c[k],0);
   const agg={buy:T('buy'),need:T('need'),biz:T('biz'),non:T('non'),tax:T('tax'),vatIn:T('vatIn'),after:T('after')},cost=T('cost');
-  return `<h1>매매 프로젝트</h1>
+  return `<h1>Fixfolio</h1>
   <button class="big" data-go="manage"><div class="ico">${icon('grid')}</div><span class="grow"><b>프로젝트 관리</b><small>새 프로젝트 · 비용 기록 · 수정</small></span>${icon('chev')}</button>
   <div class="card" style="margin-top:14px">${ring(parts(agg),won(agg.after),'세후 예상 이익 · '+ps.length+'건')}${legend(parts(agg))}<div class="sub" style="text-align:center;margin-top:4px">총 투입 ${won(cost)} · 평균 수익률 ${cost?pct(agg.after/cost):'–'}</div></div>
   ${(()=>{const r=ps.filter(p=>juneInfo(p)?.risk);return r.length?`<div class="alert"><b>재산세 주의 ${r.length}건</b>6월 1일에 갖고 있을 예정인 프로젝트예요. 6월 1일까지 잔금을 받으면 그해 재산세가 안 나와요.</div>`:''})()}
@@ -426,7 +426,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 async function put(col,id,data){const arr=col==='projects'?S.projects:S.costs;if(id){const i=arr.findIndex(x=>x.id===id);if(i<0)arr.push({...data,id});else arr[i]={...data,id}}else arr.push({...data,id:uid()});persist();render();return true}
 async function del(col,id){const k=col==='projects'?'projects':'costs';S[k]=S[k].filter(x=>x.id!==id);persist();render()}
 function exportData(){const blob=new Blob([JSON.stringify({app:'maemae',version:1,exportedAt:new Date().toISOString(),projects:S.projects,costs:S.costs,set:S.set},null,1)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='매매프로젝트-백업-'+iso(new Date())+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Fixfolio-백업-'+iso(new Date())+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
   try{localStorage.setItem(KEY+'-lastbackup',new Date().toISOString())}catch(_){}render();toast('백업 파일을 저장했어요')}
 function lastBackup(){try{return localStorage.getItem(KEY+'-lastbackup')}catch(_){return null}}
 
@@ -583,7 +583,7 @@ document.addEventListener('input',e=>{const t=e.target;if(t.dataset&&t.dataset.a
   if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
   if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
 document.addEventListener('change',e=>{if(e.target.id==='p-ty'){const v=$('#p-v');if(v&&(e.target.value==='상가'||e.target.value==='오피스텔'))v.value='과세'}if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';f.text().then(t=>{let d;try{d=JSON.parse(t)}catch(_){toast('백업 파일을 읽지 못했어요');return}
-  if(!d||!Array.isArray(d.projects)){toast('매매 프로젝트 백업 파일이 아니에요');return}S.pending=d;
+  if(!d||!Array.isArray(d.projects)){toast('Fixfolio 백업 파일이 아니에요');return}S.pending=d;
   openSheet(`<h2>백업 불러오기</h2><p class="sub">프로젝트 ${d.projects.length}건, 비용 ${(d.costs||[]).length}건이 들어 있어요${d.exportedAt?' ('+esc(String(d.exportedAt).slice(0,10))+' 백업)':''}. 지금 앱에 있는 데이터는 이 백업으로 바뀌어요.</p><div class="acts"><button class="btn pri" data-impok>불러오기</button><button class="btn" data-close>취소</button></div>`)})}if(e.target.id==='m-r'&&e.target.value==='없음'){const d=$('#m-e');if(d)d.value='불공제'}if(e.target.id==='c-c'){const d=$('#c-e');if(d&&CAT_DED[e.target.value])d.value=CAT_DED[e.target.value]}if(S.view==='tax'&&(e.target.dataset.bl||e.target.dataset.br))render()});
 document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==='wz'){wzNext(e.target,e.submitter);return}
   if(e.target.id==='wk'){const f=e.target,fd=Object.fromEntries(new FormData(f));const workers=[...f.querySelectorAll('.wrow')].map(r=>({name:r.querySelector('.w-n').value.trim(),rate:num(r.querySelector('.w-r').value),count:num(r.querySelector('.w-c').value)||1,days:num(r.querySelector('.w-d').value)||1})).filter(w=>w.name||w.rate);

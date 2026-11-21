@@ -1,7 +1,7 @@
 {
-  "name": "매매 프로젝트",
-  "short_name": "매매",
-  "description": "부동산 매매사업자 건별 수익·세금 관리",
+  "name": "Fixfolio",
+  "short_name": "Fixfolio",
+  "description": "Fixfolio — 사서 고치고 파는 부동산 건별 수익·세금·현장 기록",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",
