@@ -274,9 +274,10 @@ function manage(){const ps=sorted(),common=S.costs.filter(c=>!c.pid).sort((a,b)=
   <div class="card">${ps.length?ps.map(p=>{const c=calc(p);return `<div class="li"><button class="lib grow" data-open="${esc(p.id)}"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.status||'진행중')} · ${esc(p.type||'아파트')} · 세후 ${won(c.after)}</div></button><button class="btn sm" data-editp="${esc(p.id)}">수정</button></div>`}).join(''):'<div class="sub">아직 없어요. 위에서 새 프로젝트를 만들어 보세요.</div>'}</div>
   <div class="sec">공통비용</div>
   <div class="card">${common.length?common.map(costRow).join(''):'<div class="sub">여러 건에 같이 드는 비용(기장료 등)은 기록할 때 프로젝트를 "공통"으로 고르세요.</div>'}</div>
-  <div class="sec">데이터 백업</div>
+  <div class="sec">데이터 백업 · 내보내기</div>
   <div class="card"><div class="sub">데이터는 이 폰에만 저장돼요. 폰을 바꾸거나 앱을 지우기 전에 꼭 백업하세요.${(()=>{const b=lastBackup();return b?' · 마지막 백업 '+b.slice(0,10):' · <b style="color:var(--rose)">아직 백업 안 함</b>'})()}</div>
   <div class="two" style="margin-top:12px"><button class="btn pri" data-export>백업 저장</button><button class="btn" data-import>백업 불러오기</button></div>
+  <button class="btn" data-xlsx style="width:100%;margin-top:10px">엑셀로 내보내기 (.xlsx)</button><div class="sub" style="margin-top:6px;font-size:12px">프로젝트 · 비용 내역 · 작업 인원 · 자재 단가 · 연간 정산 시트로 나눠 저장돼요. 엑셀 파일은 보기용이고, 복구는 백업 파일로 해요.</div>
   <input type="file" id="imp" accept="application/json,.json" hidden></div>`}
 
 function annual(y){const inY=s=>s&&+String(s).slice(0,4)===y;const sold=S.projects.filter(p=>inY(p.sellDate)&&(+p.sellPrice||0)>0).map(p=>({p,c:calc(p)}));
@@ -303,6 +304,7 @@ function year(){const y=S.year,a=annual(y),kv=(k,v)=>`<div class="kv"><span>${k}
   <div class="card">${kv('부가세 (건물분, 매도 때 납부)',full(a.vat))}${kv('보유세 (재산세·종부세)',full(a.hold))}<div class="sub" style="margin-top:6px">보유세는 비용에 "사업경비"로 기록하면 위 사업경비에도 들어가요. 부가세는 매수인에게 받아서 내는 돈이라 이익 계산에는 매도가에 포함된 경우만 빠져요.</div></div>
   <div class="sec">이 해에 판 프로젝트</div>
   <div class="list">${a.sold.length?a.sold.map(x=>pcard(x.p)).join(''):'<div class="card empty">이 해에 매도한 프로젝트가 없어요.</div>'}</div>
+  <button class="btn" data-xlsx style="width:100%;margin-top:16px">엑셀로 내보내기</button>
   <p class="note">간이 추정치예요. 예정신고는 기본세율로 내고, 5월 확정신고 때 규제지역 다주택 건은 비교과세(단기 70%·60%, 중과 포함)로 다시 계산해요. 세액공제·감면은 반영하지 않아요.</p>`}
 
 function taxv(){const d=S.draft||(S.draft={deduction:S.set.deduction,local:S.set.local,brackets:S.set.brackets.map(r=>[...r])});
@@ -465,6 +467,39 @@ function apply(d){S.projects=Array.isArray(d.projects)?d.projects:[];S.costs=Arr
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 async function put(col,id,data){const arr=col==='projects'?S.projects:S.costs;if(id){const i=arr.findIndex(x=>x.id===id);if(i<0)arr.push({...data,id});else arr[i]={...data,id}}else arr.push({...data,id:uid()});persist();render();return true}
 async function del(col,id){const k=col==='projects'?'projects':'costs';S[k]=S[k].filter(x=>x.id!==id);persist();render()}
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRCT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zipStore(files){const te=new TextEncoder(),parts=[],cen=[];let off=0;
+  for(const f of files){const name=te.encode(f.name),data=te.encode(f.data),crc=crc32(data),lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);lh.setUint32(14,crc,true);lh.setUint32(18,data.length,true);lh.setUint32(22,data.length,true);lh.setUint16(26,name.length,true);
+    parts.push(new Uint8Array(lh.buffer),name,data);const ch=new DataView(new ArrayBuffer(46));ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint32(16,crc,true);ch.setUint32(20,data.length,true);ch.setUint32(24,data.length,true);ch.setUint16(28,name.length,true);ch.setUint32(42,off,true);
+    cen.push(new Uint8Array(ch.buffer),name);off+=30+name.length+data.length}
+  const cs=cen.reduce((a,b)=>a+b.length,0),end=new DataView(new ArrayBuffer(22));end.setUint32(0,0x06054b50,true);end.setUint16(8,files.length,true);end.setUint16(10,files.length,true);end.setUint32(12,cs,true);end.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(end.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+const xe=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+const colL=i=>{let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+function sheetXml(rows,widths,fmt){const body=rows.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>{const ref=colL(ci)+(ri+1);if(v===''||v==null)return'';
+   if(ri===0)return`<c r="${ref}" t="inlineStr" s="2"><is><t>${xe(v)}</t></is></c>`;if(typeof v==='number'&&isFinite(v)){const s=fmt&&fmt[ci]==='%'?3:fmt&&fmt[ci]==='n'?0:1;return`<c r="${ref}" s="${s}"><v>${v}</v></c>`}
+   return`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`}).join('')}</row>`).join('');
+  return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${body}</sheetData></worksheet>`}
+function exportXlsx(){const ps=sorted(),Y=S.year;
+  const P=[['프로젝트','유형','상태','지역','전용면적(㎡)','매입일','매입가','매도일','매도가','매도 구분','총 투입비','필요경비','사업경비','불공제','임대수입','세전 이익','과세 매매차익','예정신고 세액','최종 소득세','세후 이익','수익률','세금 주의']];
+  for(const p of ps){const c=calc(p);P.push([p.name,p.type||'아파트',p.status||'진행중',REG[p.region||'비수도권'],+p.area||'',p.buyDate||'',c.buy,p.sellDate||p.planSellDate||'',c.gross,c.sold?'실제':'계획',c.cost,c.need,c.biz,c.non,c.rent.inc,Math.round(c.pre),c.taxable,Math.round(c.preTax),Math.round(c.tax),Math.round(c.after),isFinite(c.roi)?c.roi:'',risks(p).filter(r=>r.lv!=='g').map(r=>r.t).join(' / ')])}
+  const C=[['날짜','프로젝트','구분','항목','금액','공제','증빙','수량','단위','단가','구매처','메모']];
+  for(const x of [...S.costs].sort((a,b)=>String(a.date).localeCompare(String(b.date))))C.push([x.date||'',pname(x.pid),x.kind==='work'?'작업':x.cat,x.item||'',+x.amount||0,x.ded||'',x.receipt||'',+x.qty||'',x.unit||'',+x.unitPrice||'',x.store||'',x.memo||'']);
+  const W=[['날짜','프로젝트','작업','구분','이름·역할 / 항목','일당','인원','일수','금액']];
+  for(const x of S.costs.filter(c=>c.kind==='work').sort((a,b)=>String(a.date).localeCompare(String(b.date)))){for(const w of x.workers||[])W.push([x.date,pname(x.pid),x.item,'인건비',w.name||'',+w.rate||0,+w.count||1,+w.days||1,(+w.rate||0)*(+w.count||1)*(+w.days||1)]);for(const e of x.extras||[])W.push([x.date,pname(x.pid),x.item,'기타',e.name||'','','','',+e.amount||0])}
+  const M=[['자재','구매 횟수','최근 단가','단위','최저 단가','평균 단가','최고 단가','최근 구매처','총액']];for(const m of mats())M.push([m.n,m.a.length,m.last?+m.last.unitPrice:'',m.last?m.last.unit||'':'',m.min||'',Math.round(m.avg)||'',m.max||'',m.last?m.last.store||'':'',m.total]);
+  const a=annual(Y),A=[['항목',`${Y}년`],['매도 건수',a.sold.length],['과세 매매차익 합계',a.taxable],['임대수입',a.rentY],['사업경비',a.biz],['사업소득금액',a.income],['소득공제',S.set.deduction],['과세표준',a.base],['적용 세율',a.rate],['종합소득세',Math.round(a.nat)],['지방소득세',Math.round(a.loc)],['연간 총 세액',Math.round(a.total)],['예정신고 때 낸 세액',Math.round(a.pre)],['5월 추가납부(+)/환급(−)',Math.round(a.diff)],['세후 순이익',Math.round(a.net)],['수익률',isFinite(a.roi)?a.roi:''],['부가세 (건물분)',a.vat],['보유세',a.hold]];
+  const sheets=[['프로젝트',P,[22,12,8,14,10,12,14,12,14,8,14,12,12,10,12,14,14,13,13,14,9,40],{20:'%'}],['비용 내역',C,[12,22,12,20,13,10,18,8,6,11,14,20],{7:'n'}],['작업 인원',W,[12,22,14,8,18,11,6,6,13],{6:'n',7:'n'}],['자재 단가',M,[18,9,11,6,11,11,11,14,13],{1:'n'}],[`${Y}년 정산`,A,[24,18],{}]];
+  A.forEach((r,i)=>{if(r[0]==='적용 세율'||r[0]==='수익률')r.fmt='%'});
+  const files=[{name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`},
+   {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+   {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xe(s[0])}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+   {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+   {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0"/><numFmt numFmtId="165" formatCode="0.0%"/></numFmts><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF1F3F6"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
+   ...sheets.map((s,i)=>({name:`xl/worksheets/sheet${i+1}.xml`,data:s[0].endsWith('정산')?sheetXml(s[1].map(r=>r),s[2],null).replace(/(<row r="(\d+)">)(.*?)(<\/row>)/g,(m,a,n,b,c)=>s[1][n-1]&&s[1][n-1].fmt==='%'?a+b.replace(/s="1"/g,'s="3"')+c:m):sheetXml(s[1],s[2],s[3])}))];
+  const blob=zipStore(files),u=URL.createObjectURL(blob),el=document.createElement('a');el.href=u;el.download='Fixfolio-'+iso(new Date())+'.xlsx';document.body.appendChild(el);el.click();setTimeout(()=>{URL.revokeObjectURL(u);el.remove()},1500);toast('엑셀 파일을 저장했어요')}
 function exportData(){const blob=new Blob([JSON.stringify({app:'maemae',version:1,exportedAt:new Date().toISOString(),projects:S.projects,costs:S.costs,set:S.set},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Fixfolio-백업-'+iso(new Date())+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
   try{localStorage.setItem(KEY+'-lastbackup',new Date().toISOString())}catch(_){}render();toast('백업 파일을 저장했어요')}
@@ -653,6 +688,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
   else if('wback' in ds)wzGo(-1);
   else if(ds.costbd)costSheet(ds.costbd);
   else if('export' in ds)exportData();
+  else if('xlsx' in ds)exportXlsx();
   else if('import' in ds)$('#imp').click();
   else if('impok' in ds){apply(S.pending);S.pending=null;persist();closeSheet();S.view='home';render();toast('백업을 불러왔어요')}
   else if(ds.editp!==undefined)pForm(S.projects.find(p=>p.id===ds.editp));
