@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>매매 프로젝트</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#eef0f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101216" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* VOICE: calm personal-finance app, quiet and clear
+   IDEA: a pocket portfolio — each flip is one holding
+   PICTURE: soft ring of where the money went, per portfolio and per project
+   COLOUR and TYPE: cool grey ground, white cards, muted green/blue/amber; system sans
+   LAYOUT: one phone column up to 520px, floating tab bar */
+:root{color-scheme:light dark;--bg:light-dark(#eef0f4,#101216);--card:light-dark(#fff,#1a1d23);--ink:light-dark(#1c2029,#e8eaee);--mute:light-dark(#888e99,#8f95a1);--line:light-dark(#e6e8ed,#2a2e36);--soft:light-dark(#f3f4f7,#23272e);--green:#5cb27c;--blue:#5f8fe0;--amber:#e9a462;--rose:#d9837a;--slate:light-dark(#c3c8d1,#4d535e);--dark:light-dark(#20242c,#eceef2);--dink:light-dark(#fff,#15171b)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased}
+.app{max-width:520px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 18px calc(120px + env(safe-area-inset-bottom))}
+h1{font-size:27px;line-height:1.15;font-weight:700;letter-spacing:-.02em;margin:10px 2px 18px;text-wrap:balance}
+h2{font-size:20px;margin:0 0 6px}
+.card{background:var(--card);border-radius:22px;padding:18px;box-shadow:0 1px 2px rgba(20,25,35,.04),0 8px 24px rgba(20,25,35,.05)}
+.big{display:flex;align-items:center;gap:14px;width:100%;padding:20px;border:0;border-radius:24px;background:var(--dark);color:var(--dink);font:inherit;text-align:left;cursor:pointer;min-height:88px}
+.big b{font-size:19px;display:block}.big small{opacity:.7;font-size:14px}
+.big .ico{background:rgba(127,127,127,.18)}
+.ring{position:relative;width:min(250px,68vw);aspect-ratio:1;margin:6px auto 2px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:0 40px}
+.ring .c b{font-size:clamp(24px,7.5vw,34px);letter-spacing:-.02em;white-space:nowrap}
+.ring .c span{color:var(--mute);font-size:13px}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:13px;color:var(--mute);margin:10px 0 4px}
+.lg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}.lg b{color:var(--ink);font-weight:600}
+.sec{font-size:17px;font-weight:650;margin:26px 2px 12px}
+.list{display:grid;gap:12px}
+.pcard{display:block;width:100%;text-align:left;border:0;font:inherit;color:inherit;cursor:pointer}
+.row{display:flex;align-items:center;gap:12px}
+.ico{width:44px;height:44px;border-radius:14px;background:var(--soft);display:grid;place-items:center;flex:none;color:var(--blue)}
+.grow{flex:1}
+.name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{color:var(--mute);font-size:14px}
+.amt{font-weight:700;font-size:18px;white-space:nowrap;text-align:right}
+.pill{display:inline-flex;gap:4px;font-size:13px;padding:2px 9px;border-radius:99px;background:var(--soft);white-space:nowrap;margin-top:4px;float:right}
+.up{color:var(--green)}.dn{color:var(--rose)}
+.bar{height:8px;border-radius:99px;background:var(--soft);margin-top:14px;overflow:hidden}.bar i{display:block;height:100%;border-radius:99px}
+.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));width:min(496px,calc(100% - 24px));display:grid;grid-template-columns:repeat(5,1fr);background:color-mix(in srgb,var(--card) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:28px;padding:6px;box-shadow:0 10px 30px rgba(20,25,35,.12);z-index:5}
+.tabs button{border:0;background:none;font:inherit;font-size:12px;color:var(--mute);display:grid;justify-items:center;gap:2px;padding:6px 0;min-height:54px;cursor:pointer;border-radius:22px}
+.tabs button.on{color:var(--blue);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--card);border-radius:18px;padding:13px 15px}.stat span{display:block;color:var(--mute);font-size:13px}.stat b{font-size:16px;white-space:nowrap}
+.stat.hi{background:var(--dark);color:var(--dink);grid-column:1/-1}.kv b{text-align:right}.stat.hi span{color:inherit;opacity:.7}
+.btn{border:0;border-radius:16px;padding:0 18px;min-height:50px;font:inherit;font-weight:600;cursor:pointer;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(20,25,35,.05)}
+.btn.pri{background:var(--dark);color:var(--dink)}.btn.warn{color:var(--rose);background:var(--soft);box-shadow:none}
+.btn.sm{min-height:40px;padding:0 12px;font-size:14px;border-radius:12px;background:var(--soft);box-shadow:none}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;font:inherit;color:var(--mute);padding:6px 0;min-height:44px;cursor:pointer}
+.li{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.li:first-child{border-top:0;padding-top:2px}.li:last-child{padding-bottom:2px}
+.cat{margin:12px 0}.cat:first-child{margin-top:0}.cat .row{justify-content:space-between;font-size:15px}.cat .bar{margin-top:8px;height:7px}
+.tl{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;font-size:15px}.tl span{color:var(--mute)}.tl b{font-weight:600;text-align:right;white-space:nowrap}
+.hero{text-align:center;padding:26px 18px}.hero b{display:block;font-size:clamp(30px,9vw,40px);letter-spacing:-.02em;white-space:nowrap}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}.kv:first-child{border-top:0}.kv span{color:var(--mute)}.kv b{font-weight:600;white-space:nowrap}
+.yr{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px}.yr b{font-size:18px;min-width:70px;text-align:center}
+.br{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) auto;gap:8px;align-items:end;margin-bottom:8px}
+.br small{grid-column:1/-1;color:var(--mute);font-size:13px;margin:-4px 2px 6px}
+.alert{background:color-mix(in srgb,var(--amber) 15%,var(--card));border-radius:18px;padding:14px 16px;font-size:14px;margin-top:12px;line-height:1.5}.alert b{display:block;font-size:15px;margin-bottom:2px}
+.alert.ok{background:color-mix(in srgb,var(--green) 13%,var(--card))}
+.wpill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;margin-top:5px;background:color-mix(in srgb,var(--amber) 20%,var(--card));color:light-dark(#9a5d1f,#f0c08d);white-space:nowrap}
+.three{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(0,1.3fr);gap:10px}
+details.mat summary{list-style:none;cursor:pointer}details.mat summary::-webkit-details-marker{display:none}
+.mstat{display:flex;justify-content:space-between;gap:8px;background:var(--soft);border-radius:14px;padding:10px 14px;margin-top:14px;font-size:13px;color:var(--mute)}.mstat b{color:var(--ink);font-size:14px}
+.empty{text-align:center;color:var(--mute);padding:28px 10px}
+.note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
+.sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
+.panel{background:var(--card);width:min(520px,100%);border-radius:26px 26px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+label{display:block;font-size:13px;color:var(--mute);margin:12px 2px 6px}
+input,select{width:100%;font:inherit;font-size:16px;padding:11px 14px;border-radius:14px;border:1px solid var(--line);background:var(--soft);color:var(--ink);min-height:48px}
+.acts{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:20px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--dark);color:var(--dink);padding:10px 16px;border-radius:14px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+.toast.on{opacity:1}
+.banner{background:var(--soft);border-radius:14px;padding:10px 14px;font-size:13px;color:var(--mute);margin-bottom:12px}
+@media (prefers-reduced-motion:no-preference){.ring circle{transition:stroke-dasharray .5s ease,stroke-dashoffset .5s ease}}
+</style>
+</head>
+<body>
+<main class="app" id="app"><div class="empty">불러오는 중…</div></main>
+<nav class="tabs" id="tabs" aria-label="메뉴"></nav>
+<div class="sheet" id="sheet"><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=s=>+(String(s??'').replace(/[^\d.\-]/g,''))||0;
+const DEF={year:new Date().getFullYear(),deduction:1500000,local:10,brackets:[[0,6],[14e6,15],[5e7,24],[8.8e7,35],[1.5e8,38],[3e8,40],[5e8,42],[1e9,45]]};
+const CATS=['취득세·등기','자재비','공사·인건비','중개·법무','재산세','종부세','세무비용','이자','기타'];
+const CAT_DED={'취득세·등기':'필요경비','자재비':'필요경비','공사·인건비':'필요경비','중개·법무':'필요경비','재산세':'사업경비','종부세':'사업경비','세무비용':'사업경비','이자':'사업경비','기타':'필요경비'};
+const DEDS=['필요경비','사업경비','불공제'];
+const STATUS=['진행중','완료','보류'];
+const COL={buy:'var(--slate)',need:'var(--blue)',etc:'var(--amber)',tax:'var(--rose)',gain:'var(--green)'};
+const S={projects:[],costs:[],set:{...DEF},view:'home',pid:null,db:null,mode:'loading',armed:null,year:new Date().getFullYear(),draft:null};
+
+const I={
+house:'<path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/>',
+grid:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><path d="M16.5 13.5v6M13.5 16.5h6"/>',
+chart:'<path d="M5 20V11M12 20V5M19 20v-6"/>',
+box:'<path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/>',
+pct:'<circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M18 6L6 18"/>',
+chev:'<path d="M9 6l6 6-6 6"/>',back:'<path d="M15 6l-6 6 6 6"/>',
+coin:'<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10.5h5"/>'};
+const icon=(n,s=22)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+
+function won(n){n=Math.round(n||0);const s=n<0?'−':'';n=Math.abs(n);let e=Math.floor(n/1e8),m=Math.round(n%1e8/1e4);if(m===10000){e++;m=0}
+  if(e&&m)return s+e+'억 '+m.toLocaleString()+'만';if(e)return s+e+'억';if(m)return s+m.toLocaleString()+'만';return s+n.toLocaleString()+'원'}
+const full=n=>(n<0?'−':'')+Math.abs(Math.round(n||0)).toLocaleString()+'원';
+const pct=x=>isFinite(x)?(x*100).toFixed(1)+'%':'–';
+const day=s=>s?new Date(s+'T00:00:00'):null;
+const dd=(a,b)=>Math.round((b-a)/864e5);
+const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+
+function bk(x){const b=[...S.set.brackets].filter(r=>isFinite(r[0])).sort((a,c)=>a[0]-c[0]);let d=0,prev=0,rate=0,ded=0;
+  for(const [l,r] of b){d+=l*(r-prev)/100;prev=r;if(x>=l){rate=r/100;ded=d}}return{rate,ded}}
+function tax(x,sur=0){if(x<=0)return 0;const{rate,ded}=bk(x);return x*rate-ded+x*sur}
+function calc(p){const cs=S.costs.filter(c=>c.pid===p.id);const sum=k=>cs.filter(c=>c.ded===k).reduce((a,c)=>a+(+c.amount||0),0);
+  const acq=acqTax(p),hasAcq=cs.some(c=>c.cat==='취득세·등기'),acqAuto=hasAcq?0:acq.total;
+  const need=sum('필요경비')+acqAuto,biz=sum('사업경비'),non=sum('불공제'),buy=+p.buyPrice||0,sold=(+p.sellPrice||0)>0,L=1+S.set.local/100;
+  const gross=sold?+p.sellPrice:(+p.planSellPrice||0),vatAmt=p.vat==='과세'?Math.round((+p.vatBase||0)*.1):0,vatIn=p.vat==='과세'&&p.vatIncl==='포함'?vatAmt:0;
+  const sell=gross-vatIn,cost=buy+need+biz+non,pre=sell-cost,hold=cs.filter(c=>c.cat==='재산세'||c.cat==='종부세').reduce((a,c)=>a+(+c.amount||0),0);
+  const taxable=Math.max(0,sell-buy-need-(+p.lt||0)),basicNat=tax(taxable),hs=+p.housesSell||1,cmp=p.region==='규제'&&hs>=2;
+  const end=day(p.sellDate)||day(p.planSellDate),b=day(p.buyDate),yrs=b&&end?dd(b,end)/365:0;
+  let yang=0,why='';if(cmp){const amt=Math.max(0,sell-buy-need-2.5e6),short=yrs<1?.7:yrs<2?.6:0,sur=hs>=3?.3:.2,t1=amt*short,t2=tax(amt)+amt*sur;yang=Math.max(t1,t2);why=t1>=t2?'단기 '+short*100+'%':'기본세율 +'+sur*100+'%p 중과'}
+  const nat=cmp?Math.max(basicNat,yang):basicNat,t=nat*L;
+  const method=!cmp?'종소세 기본세율':yang>basicNat?'양도세 방식 ('+why+')':'종소세 방식 (더 큼)';
+  return{cs,need,biz,non,buy,gross,sell,sold,vatAmt,vatIn,hold,cost,pre,taxable,basicNat,preTax:basicNat*L,cmp,yang,yangNat:cmp?yang:0,nat,method,yrs,acq,hasAcq,acqAuto,tax:t,after:pre-t,roi:cost?(pre-t)/cost:NaN}}
+function acqTax(p){const P=+p.buyPrice||0;if(!P)return{rate:0,tot:0,total:0,heavy:0};const n=+p.housesBuy||1,reg=p.region||'비수도권',big=p.over85==='초과';
+  let heavy=0;if(p.lowPrice!=='예'){heavy=reg==='규제'?(n>=3?12:n===2?8:0):(n>=4?12:n===3?8:0)}
+  let r,edu,farm;if(heavy){r=heavy;edu=.4;farm=big?(heavy===8?.6:1):0}else{r=P<=6e8?1:P<=9e8?(P/1e8*2/3-3):3;edu=r*.1;farm=big?.2:0}
+  const tot=r+edu+farm;return{rate:r,tot,total:Math.round(P*tot/100),heavy}}
+const REG={'규제':'조정대상지역 (규제)','수도권비규제':'수도권 비규제','비수도권':'비수도권'};
+function june(p){const b=day(p.buyDate);if(!b)return[];const end=day(p.sellDate)||day(p.planSellDate),out=[];
+  for(let y=b.getFullYear();y<=(end||today()).getFullYear();y++){const j=new Date(y,5,1);if(b<=j&&(!end||end>j))out.push(y)}return out}
+function juneInfo(p){if(day(p.sellDate)||!p.buyDate||p.status==='완료')return null;const t=today(),b=day(p.buyDate);let y=t.getFullYear();if(t>new Date(y,5,1))y++;
+  if(b>new Date(y,5,1))y=b.getFullYear()+(b>new Date(b.getFullYear(),5,1)?1:0);const J=new Date(y,5,1),pl=day(p.planSellDate);
+  return{risk:!pl||pl>J,plan:!!pl,year:y,dl:iso(J),left:dd(t,J)}}
+function deadlines(p){const s=day(p.sellDate);if(!s)return null;const pre=new Date(s.getFullYear(),s.getMonth()+3,0);
+  const vat=s.getMonth()<6?s.getFullYear()+'-07-25':(s.getFullYear()+1)+'-01-25';return{pre:iso(pre),vat}}
+function progress(p){const b=day(p.buyDate),pl=day(p.planSellDate),s=day(p.sellDate),t=today();
+  if(s){const d=pl?dd(pl,s):0;return{pct:100,label:!pl?'매도 완료':d>0?d+'일 늦게 매도':d<0?(-d)+'일 빨리 매도':'계획대로 매도'}}
+  if(b&&pl){const tot=Math.max(1,dd(b,pl)),el=dd(b,t),rem=dd(t,pl);return{pct:Math.max(2,Math.min(100,el/tot*100)),label:rem>=0?'매도 계획까지 '+rem+'일':(-rem)+'일 지연 중'}}
+  return{pct:0,label:'일정 미입력'}}
+
+function ring(parts,center,sub){const R=80,C=2*Math.PI*R,live=parts.filter(p=>p.v>0),tot=live.reduce((a,p)=>a+p.v,0);let off=0;
+  const segs=tot?live.map(p=>{const share=p.v/tot*C;const len=live.length>1?Math.max(.1,share-26):C;const s=`<circle cx="100" cy="100" r="${R}" fill="none" stroke="${p.c}" stroke-width="22" stroke-linecap="round" stroke-dasharray="${len} ${C}" stroke-dashoffset="${-(off+(live.length>1?13:0))}"/>`;off+=share;return s}).join(''):'';
+  return `<div class="ring"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--soft)" stroke-width="22"/>${segs}</svg><div class="c"><b>${center}</b><span>${sub}</span></div></div>`}
+const legend=ps=>`<div class="lg">${ps.filter(p=>p.v>0).map(p=>`<span><i style="background:${p.c}"></i>${p.l} <b>${won(p.v)}</b></span>`).join('')}</div>`;
+const parts=c=>[{l:'매입가',v:c.buy,c:COL.buy},{l:'필요경비',v:c.need,c:COL.need},{l:'기타비용',v:c.biz+c.non,c:COL.etc},{l:'세금',v:c.tax+c.vatIn,c:COL.tax},{l:'세후 이익',v:Math.max(0,c.after),c:COL.gain}];
+const sorted=()=>[...S.projects].sort((a,b)=>(a.status==='진행중'?0:1)-(b.status==='진행중'?0:1)||String(b.buyDate||'').localeCompare(String(a.buyDate||'')));
+
+function pcard(p){const c=calc(p),pr=progress(p),ok=c.after>=0,j=juneInfo(p);
+  return `<button class="card pcard" data-open="${esc(p.id)}"><div class="row"><div class="ico">${icon('house')}</div><div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.status||'진행중')} · ${pr.label}</div>${j&&j.risk?`<span class="wpill">재산세 주의 · 6/1까지 D-${j.left}</span>`:''}</div><div><div class="amt">${won(c.after)}</div><span class="pill ${ok?'up':'dn'}">${ok?'↗':'↘'} ${pct(c.roi)}</span></div></div><div class="bar"><i style="width:${pr.pct}%;background:${ok?'var(--green)':'var(--rose)'}"></i></div></button>`}
+
+function home(){const ps=sorted(),cs=ps.map(calc),T=k=>cs.reduce((a,c)=>a+c[k],0);
+  const agg={buy:T('buy'),need:T('need'),biz:T('biz'),non:T('non'),tax:T('tax'),vatIn:T('vatIn'),after:T('after')},cost=T('cost');
+  return `<h1>매매 프로젝트</h1>
+  <button class="big" data-go="manage"><div class="ico">${icon('grid')}</div><span class="grow"><b>프로젝트 관리</b><small>새 프로젝트 · 비용 기록 · 수정</small></span>${icon('chev')}</button>
+  <div class="card" style="margin-top:14px">${ring(parts(agg),won(agg.after),'세후 예상 이익 · '+ps.length+'건')}${legend(parts(agg))}<div class="sub" style="text-align:center;margin-top:4px">총 투입 ${won(cost)} · 평균 수익률 ${cost?pct(agg.after/cost):'–'}</div></div>
+  ${(()=>{const r=ps.filter(p=>juneInfo(p)?.risk);return r.length?`<div class="alert"><b>재산세 주의 ${r.length}건</b>6월 1일에 갖고 있을 예정인 프로젝트예요. 6월 1일까지 잔금을 받으면 그해 재산세가 안 나와요.</div>`:''})()}
+  <div class="sec">프로젝트별</div>
+  <div class="list">${ps.length?ps.map(pcard).join(''):`<div class="card empty">아직 프로젝트가 없어요.<br>위의 <b>프로젝트 관리</b>에서 추가해 보세요.</div>`}</div>`}
+
+function detail(){const p=S.projects.find(x=>x.id===S.pid);if(!p){S.view='home';return home()}
+  const c=calc(p),pr=progress(p),byCat=CATS.map(k=>({k,v:c.cs.filter(x=>x.cat===k).reduce((a,x)=>a+(+x.amount||0),0)})).filter(x=>x.v),mx=Math.max(1,...byCat.map(x=>x.v));
+  const st=(l,v,h)=>`<div class="stat${h?' hi':''}"><span>${l}</span><b>${v}</b></div>`;
+  const held=p.buyDate?dd(day(p.buyDate),p.sellDate?day(p.sellDate):today()):null,jn=june(p),dl=deadlines(p);
+  return `<button class="back" data-go="home">${icon('back',20)} 홈</button>
+  <h1 style="margin-top:0">${esc(p.name)}</h1>
+  <div class="card">${ring(parts(c),won(c.after),'세후 이익 · 수익률 '+pct(c.roi))}${legend(parts(c))}</div>
+  ${(()=>{const j=juneInfo(p);if(!j)return'';if(j.risk)return `<div class="alert"><b>${j.year}년 재산세가 나올 예정이에요</b>${j.plan?'계획 매도일이 6월 1일 이후예요. ':'매도 계획일이 없어요. '}${j.dl}까지 잔금을 받으면 피할 수 있어요 · D-${j.left}</div>`;
+    return `<div class="alert ok"><b>${j.year}년 재산세 없음</b>계획대로 6월 1일 전에 팔면 안 나와요 · 잔금 마감 ${j.dl} (D-${j.left})</div>`})()}
+  <div class="sec">핵심 숫자</div>
+  <div class="stats">${st('매도가'+(c.sold?'':' (계획)'),full(c.gross))}${st('총 투입비',full(c.cost))}${st('세전 이익',full(c.pre))}${st('과세 매매차익',full(c.taxable))}${st('예정신고 세액 (기본세율)',full(c.preTax))}${st('최종 소득세'+(c.cmp?' (비교과세)':''),full(c.tax))}${st(p.vat==='과세'?'부가세 · '+(c.vatIn?'매도가에 포함':'별도로 받음'):'부가세',p.vat==='과세'?full(c.vatAmt):'면세')}${st('보유세 (재산세·종부세)',full(c.hold))}${st('세후 이익',full(c.after),1)}</div>
+  <div class="sec">세금 판단</div>
+  <div class="card">${[['지역',REG[p.region||'비수도권']],['주택 수 (취득 / 매도 때)',(+p.housesBuy||1)+'채 / '+(+p.housesSell||1)+'채'],['취득세율 (교육세·농특세 포함)',c.acq.total?c.acq.tot.toFixed(2)+'%'+(c.acq.heavy?' · 중과':''):'–'],['예상 취득세',c.hasAcq?'기록된 금액 사용':full(c.acq.total)+' (자동 반영 중)'],['보유 기간',c.yrs?c.yrs.toFixed(1)+'년'+(p.sellDate?'':' (계획 기준)'):'–'],['비교과세',c.cmp?'대상 · 규제지역 다주택':'대상 아님'],['적용 방식',c.method]].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}
+  ${c.cmp?`<div class="sub" style="margin-top:6px">종소세 방식 ${full(c.basicNat)} vs 양도세 방식 ${full(c.yang)} 중 큰 금액 (지방세 별도)</div>`:''}</div>
+  <div class="sec">일정</div>
+  <div class="card"><div class="tl"><span>매입</span><i></i><b>${p.buyDate||'–'}</b><span>계획 매도</span><i></i><b>${p.planSellDate||'–'}</b><span>실제 매도</span><i></i><b>${p.sellDate||'–'}</b><span>보유 기간</span><i></i><b>${held!=null?held+'일':'–'}</b><span>재산세 기준일 (6/1) 보유</span><i></i><b>${jn.length?jn.map(y=>y+'년').join(', ')+(p.sellDate?'':' (계획 기준)'):'해당 없음'}</b>${dl?`<span>소득세 예정신고 기한</span><i></i><b>${dl.pre}</b>${p.vat==='과세'?`<span>부가세 신고 기한</span><i></i><b>${dl.vat}</b>`:''}`:''}</div>
+  <div class="bar"><i style="width:${pr.pct}%;background:var(--blue)"></i></div><div class="sub" style="margin-top:8px">${pr.label}${c.sold&&+p.planSellPrice?` · 계획 대비 매도가 ${(+p.sellPrice-+p.planSellPrice>=0?'+':'')+won(+p.sellPrice-+p.planSellPrice)}`:''}</div></div>
+  <div class="sec">비용 구성</div>
+  <div class="card">${byCat.length?byCat.map(x=>`<div class="cat"><div class="row"><span>${x.k}</span><b>${won(x.v)}</b></div><div class="bar"><i style="width:${x.v/mx*100}%;background:var(--amber)"></i></div></div>`).join(''):'<div class="sub">기록된 비용이 없어요.</div>'}</div>
+  <div class="sec">비용 내역</div>
+  <div class="card">${c.cs.length?[...c.cs].sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(costRow).join(''):'<div class="sub">비용 추가로 기록해 보세요.</div>'}</div>
+  <div class="two" style="margin-top:16px"><button class="btn pri" data-addmat="${esc(p.id)}">자재 추가</button><button class="btn" data-addcost="${esc(p.id)}">비용 추가</button></div>
+  <button class="btn" data-editp="${esc(p.id)}" style="width:100%;margin-top:10px">프로젝트 수정</button>`}
+const costRow=x=>`<div class="li"><div class="grow"><div class="name">${esc(x.item||x.cat)}</div><div class="sub">${esc(x.date||'')} · ${x.qty?`${(+x.qty).toLocaleString()}${esc(x.unit||'')} × ${(+x.unitPrice||0).toLocaleString()}원${x.store?' · '+esc(x.store):''}`:esc(x.cat)} · ${esc(x.ded)}</div></div><b style="white-space:nowrap">${won(x.amount)}</b><button class="btn sm${S.armed===x.id?' warn':''}" data-delcost="${esc(x.id)}">${S.armed===x.id?'삭제 확인':'삭제'}</button></div>`;
+
+function manage(){const ps=sorted(),common=S.costs.filter(c=>!c.pid).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  return `<h1>프로젝트 관리</h1>
+  <div class="two"><button class="btn pri" data-newp>새 프로젝트</button><button class="btn" data-addcost="">비용 기록</button></div>
+  <button class="btn" data-addmat="" style="width:100%;margin-top:10px">자재 구매 기록</button>
+  <div class="sec">전체 프로젝트</div>
+  <div class="card">${ps.length?ps.map(p=>`<div class="li"><div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.status||'진행중')} · 매입 ${p.buyDate||'–'}</div></div><button class="btn sm" data-editp="${esc(p.id)}">수정</button><button class="btn sm" data-open="${esc(p.id)}">보기</button></div>`).join(''):'<div class="sub">아직 없어요. 새 프로젝트를 추가해 보세요.</div>'}</div>
+  <div class="sec">데이터 백업</div>
+  <div class="card"><div class="sub">데이터는 이 폰에만 저장돼요. 폰을 바꾸거나 앱을 지우기 전에 꼭 백업 파일을 저장하세요.${(()=>{const b=lastBackup();return b?' · 마지막 백업 '+b.slice(0,10):' · 아직 백업 안 함'})()}</div>
+  <div class="two" style="margin-top:12px"><button class="btn pri" data-export>백업 저장</button><button class="btn" data-import>백업 불러오기</button></div>
+  <input type="file" id="imp" accept="application/json,.json" hidden></div>
+  <div class="sec">공통비용</div>
+  <div class="card">${common.length?common.map(costRow).join(''):'<div class="sub">여러 건에 같이 드는 비용(기장료 등)은 프로젝트를 "공통"으로 두고 기록하세요.</div>'}</div>`}
+
+function annual(y){const inY=s=>s&&+String(s).slice(0,4)===y;const sold=S.projects.filter(p=>inY(p.sellDate)&&(+p.sellPrice||0)>0).map(p=>({p,c:calc(p)}));
+  const sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);const biz=sum(S.costs.filter(c=>c.ded==='사업경비'&&inY(c.date)),c=>+c.amount||0),common=sum(S.costs.filter(c=>!c.pid&&inY(c.date)),c=>+c.amount||0);
+  const taxable=sum(sold,x=>x.c.taxable),income=taxable-biz,base=Math.max(0,income-S.set.deduction),cm=sold.filter(x=>x.c.cmp);
+  const normal=tax(base),alt=cm.length?sum(cm,x=>x.c.yangNat)+tax(Math.max(0,income-sum(cm,x=>x.c.taxable)-S.set.deduction)):0,cmpUsed=alt>normal;
+  const nat=Math.max(normal,alt),loc=nat*S.set.local/100,total=nat+loc,pre=sum(sold,x=>x.c.preTax),net=sum(sold,x=>x.c.pre)-common-total,inv=sum(sold,x=>x.c.cost);
+  const vat=sum(sold,x=>x.c.vatAmt),hold=sum(S.costs.filter(c=>(c.cat==='재산세'||c.cat==='종부세')&&inY(c.date)),c=>+c.amount||0);
+  return{sold,biz,taxable,income,base,rate:base>0?bk(base).rate:0,nat,loc,total,pre,diff:total-pre,net,roi:inv?net/inv:NaN,vat,hold,cmpUsed,normal,alt}}
+function year(){const y=S.year,a=annual(y),kv=(k,v)=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`;
+  return `<h1>연간 정산</h1>
+  <div class="yr"><button class="btn sm" data-yr="-1" aria-label="이전 연도">${icon('back',18)}</button><b>${y}년</b><button class="btn sm" data-yr="1" aria-label="다음 연도">${icon('chev',18)}</button></div>
+  <div class="card hero"><span class="sub">${a.diff>=0?'5월 추가 납부 예상':'5월 환급 예상'}</span><b class="${a.diff>=0?'':'up'}">${won(Math.abs(a.diff))}</b><span class="sub">매도 ${a.sold.length}건 기준</span></div>
+  <div class="stats" style="margin-top:12px"><div class="stat hi"><span>세후 순이익</span><b>${full(a.net)}</b></div><div class="stat"><span>수익률 (투입비 대비)</span><b>${pct(a.roi)}</b></div></div>
+  <div class="sec">계산 과정</div>
+  <div class="card">${kv('과세 매매차익 합계',full(a.taxable))}${kv('사업경비',full(-a.biz))}${kv('사업소득금액',full(a.income))}${kv('소득공제',full(-S.set.deduction))}${kv('과세표준',full(a.base))}${kv('적용 세율 구간',Math.round(a.rate*100)+'%')}${a.alt?kv('기본세율 계산',full(a.normal))+kv('비교과세 계산',full(a.alt)):''}${kv('종합소득세'+(a.cmpUsed?' (비교과세 적용)':''),full(a.nat))}${kv('지방소득세',full(a.loc))}${kv('연간 총 세액',full(a.total))}${kv('예정신고 때 낸 세액',full(a.pre))}</div>
+  <div class="sec">그 밖의 세금</div>
+  <div class="card">${kv('부가세 (건물분, 매도 때 납부)',full(a.vat))}${kv('보유세 (재산세·종부세)',full(a.hold))}<div class="sub" style="margin-top:6px">보유세는 비용에 "사업경비"로 기록하면 위 사업경비에도 들어가요. 부가세는 매수인에게 받아서 내는 돈이라 이익 계산에는 매도가에 포함된 경우만 빠져요.</div></div>
+  <div class="sec">이 해에 판 프로젝트</div>
+  <div class="list">${a.sold.length?a.sold.map(x=>pcard(x.p)).join(''):'<div class="card empty">이 해에 매도한 프로젝트가 없어요.</div>'}</div>
+  <p class="note">간이 추정치예요. 예정신고는 기본세율로 내고, 5월 확정신고 때 규제지역 다주택 건은 비교과세(단기 70%·60%, 중과 포함)로 다시 계산해요. 세액공제·감면은 반영하지 않아요.</p>`}
+
+function taxv(){const d=S.draft||(S.draft={deduction:S.set.deduction,local:S.set.local,brackets:S.set.brackets.map(r=>[...r])});
+  const b=[...d.brackets];let acc=0,prev=0;const deds=b.map(([l,r])=>(acc+=(+l||0)*((+r||0)-prev)/100,prev=+r||0,acc));
+  return `<h1>세율 설정</h1>
+  <div class="card"><div class="two"><div><label for="t-ded">소득공제</label><input id="t-ded" class="money" inputmode="numeric" data-dk="deduction" value="${(+d.deduction).toLocaleString()}"></div><div><label for="t-loc">지방소득세율 (%)</label><input id="t-loc" inputmode="decimal" data-dk="local" value="${d.local}"></div></div></div>
+  <div class="sec">과세표준 구간</div>
+  <div class="card">${b.map(([l,r],i)=>`<div class="br"><div><label for="b-l${i}">초과 금액</label><input id="b-l${i}" class="money" inputmode="numeric" data-bl="${i}" value="${(+l).toLocaleString()}"></div><div><label for="b-r${i}">세율 %</label><input id="b-r${i}" inputmode="decimal" data-br="${i}" value="${r}"></div><button class="btn sm" data-bdel="${i}" aria-label="구간 삭제">삭제</button><small>누진공제 ${full(deds[i])}</small></div>`).join('')}
+  <button class="btn sm" data-badd style="width:100%;margin-top:6px">구간 추가</button></div>
+  <div class="acts"><button class="btn pri" data-tsave>저장</button><button class="btn" data-treset>기본값</button></div>
+  <p class="note">기본값은 2026년 종합소득세 기본세율이에요. 금액과 세율만 바꾸면 누진공제는 자동으로 계산돼요.</p>`}
+
+const mats=()=>{const g={};for(const c of S.costs)if(c.cat==='자재비'&&c.item){(g[c.item]??=[]).push(c)}
+  return Object.entries(g).map(([n,a])=>{a=[...a].sort((x,y)=>String(y.date).localeCompare(String(x.date)));const pr=a.filter(x=>+x.unitPrice>0).map(x=>+x.unitPrice);
+    return{n,a,last:a.find(x=>+x.unitPrice>0),min:pr.length?Math.min(...pr):0,max:pr.length?Math.max(...pr):0,avg:pr.length?pr.reduce((s,x)=>s+x,0)/pr.length:0,total:a.reduce((s,x)=>s+(+x.amount||0),0)}}).sort((x,y)=>String(y.a[0].date).localeCompare(String(x.a[0].date)))};
+const pname=id=>S.projects.find(p=>p.id===id)?.name||'공통';
+function matv(){const m=mats();
+  return `<h1>자재 단가</h1>
+  <button class="big" data-addmat=""><div class="ico">${icon('box')}</div><span class="grow"><b>자재 구매 기록</b><small>이름만 쓰면 지난 단가·구매처가 채워져요</small></span>${icon('chev')}</button>
+  ${m.length?`<input id="m-search" type="search" placeholder="자재 검색" style="margin-top:14px" aria-label="자재 검색">`:''}
+  <div class="list" style="margin-top:14px">${m.length?m.map(x=>{const l=x.last,diff=l&&x.min?(+l.unitPrice-x.min):0;
+    return `<details class="card mat" data-name="${esc(x.n.toLowerCase())}"><summary class="row"><div class="ico">${icon('box')}</div><div class="grow"><div class="name">${esc(x.n)}</div><div class="sub">${x.a.length}번 구매 · 총 ${won(x.total)}</div></div><div style="text-align:right"><div class="amt" style="font-size:16px">${l?(+l.unitPrice).toLocaleString()+'원':'–'}</div><div class="sub">${l?'/'+esc(l.unit||'개')+' · 최근':''}</div></div></summary>
+    ${x.min?`<div class="mstat"><span>최저 <b>${x.min.toLocaleString()}</b></span><span>평균 <b>${Math.round(x.avg).toLocaleString()}</b></span><span>최고 <b>${x.max.toLocaleString()}</b></span></div>`:''}
+    ${diff>0?`<div class="sub" style="margin-top:6px">최근 단가가 최저보다 ${diff.toLocaleString()}원 비싸요</div>`:''}
+    <div style="margin-top:8px">${x.a.map(c=>`<div class="li"><div class="grow"><div class="name" style="font-size:15px">${esc(c.store||'구매처 미입력')}</div><div class="sub">${esc(c.date||'')} · ${esc(pname(c.pid))}${c.qty?` · ${(+c.qty).toLocaleString()}${esc(c.unit||'')}`:''}</div></div><b style="white-space:nowrap">${c.unitPrice?(+c.unitPrice).toLocaleString()+'원':won(c.amount)}</b></div>`).join('')}</div>
+    <button class="btn sm" data-again="${esc(x.a[0].id)}" style="width:100%;margin-top:10px">같은 자재 다시 기록</button></details>`}).join(''):`<div class="card empty">아직 자재 기록이 없어요.<br>위 버튼으로 첫 구매를 기록해 보세요.</div>`}</div>`}
+function mForm(pid,pre={}){S.form={k:'m'};const names=[...new Set(S.costs.filter(c=>c.cat==='자재비'&&c.item).map(c=>c.item))],stores=[...new Set(S.costs.map(c=>c.store).filter(Boolean))];
+  const m=v=>v?(+v).toLocaleString():'';
+  openSheet(`<h2>자재 구매 기록</h2><form id="f">
+  <datalist id="dl-n">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist><datalist id="dl-s">${stores.map(n=>`<option value="${esc(n)}">`).join('')}</datalist><datalist id="dl-u">${['개','박스','장','롤','포','통','세트','m','㎡','kg','L'].map(u=>`<option value="${u}">`).join('')}</datalist>
+  <label for="m-p">프로젝트</label><select id="m-p" name="pid"><option value="">공통</option>${sorted().map(p=>`<option value="${esc(p.id)}" ${p.id===(pre.pid??pid)?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+  <label for="m-n">자재 이름</label><input id="m-n" name="item" list="dl-n" required autocomplete="off" value="${esc(pre.item||'')}" placeholder="예: 욕실 타일 300각">
+  <div id="m-hint" class="sub" style="margin:6px 2px 0;min-height:1em"></div>
+  <div class="two"><div><label for="m-d">날짜</label><input id="m-d" type="date" name="date" value="${iso(new Date())}"></div><div><label for="m-s">구매처</label><input id="m-s" name="store" list="dl-s" autocomplete="off" value="${esc(pre.store||'')}" placeholder="예: ○○건재"></div></div>
+  <div class="three"><div><label for="m-q">수량</label><input id="m-q" name="qty" inputmode="decimal" value="${pre.qty||''}"></div><div><label for="m-u">단위</label><input id="m-u" name="unit" list="dl-u" autocomplete="off" value="${esc(pre.unit||'')}" placeholder="개"></div><div><label for="m-up">단가</label><input id="m-up" class="money" name="unitPrice" inputmode="numeric" value="${m(pre.unitPrice)}"></div></div>
+  <label for="m-a">금액 (자동 계산 · 수정 가능)</label><input id="m-a" class="money" name="amount" inputmode="numeric" required>
+  <div class="two"><div><label for="m-r">증빙</label><select id="m-r" name="receipt">${['카드','현금영수증','세금계산서','없음'].map(r=>`<option ${r===(pre.receipt||'카드')?'selected':''}>${r}</option>`).join('')}</select></div><div><label for="m-e">공제</label><select id="m-e" name="ded">${DEDS.map(c=>`<option ${c===(pre.ded||'필요경비')?'selected':''}>${c}</option>`).join('')}</select></div></div>
+  <p class="note" style="margin:12px 2px 0">샷시·확장처럼 가치를 올리는 자재는 필요경비, 도배·장판·페인트 같은 수리용은 사업경비, 증빙이 없으면 불공제예요.</p>
+  <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`);
+  matHint();calcAmt()}
+function matHint(){const n=$('#m-n')?.value.trim(),h=$('#m-hint');if(!h)return;const x=n&&mats().find(m=>m.n===n);
+  if(!x||!x.last){h.textContent=n?'처음 기록하는 자재예요':'';return}
+  const l=x.last;h.innerHTML=`지난번 ${(+l.unitPrice).toLocaleString()}원/${esc(l.unit||'개')}${l.store?' · '+esc(l.store):''} (${esc(l.date)}) · 최저 ${x.min.toLocaleString()}원`;
+  const u=$('#m-u'),s=$('#m-s'),p=$('#m-up');if(u&&!u.value)u.value=l.unit||'';if(s&&!s.value)s.value=l.store||'';if(p&&!p.value){p.value=(+l.unitPrice).toLocaleString();calcAmt()}}
+function calcAmt(){const q=num($('#m-q')?.value),p=num($('#m-up')?.value),a=$('#m-a');if(a&&q&&p)a.value=Math.round(q*p).toLocaleString()}
+
+function render(){const v=S.view;
+  $('#tabs').innerHTML=[['home','house','홈'],['manage','grid','관리'],['mat','box','자재'],['year','chart','연간'],['tax','pct','세율']].map(([k,ic,l])=>`<button class="${(v===k||(v==='detail'&&k==='home'))?'on':''}" data-go="${k}">${icon(ic)}<span>${l}</span></button>`).join('');
+  const ban='';
+  $('#app').innerHTML=S.mode==='loading'?'<div class="empty">불러오는 중…</div>':ban+({home,detail,manage,mat:matv,year,tax:taxv}[v]||home)()}
+
+const toastEl=$('#toast');let tt;function toast(m){toastEl.textContent=m;toastEl.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>toastEl.classList.remove('on'),2200)}
+function openSheet(h){$('#panel').innerHTML=h;$('#sheet').classList.add('open');setTimeout(()=>$('#panel input,#panel select')?.focus(),50)}
+function closeSheet(){$('#sheet').classList.remove('open');S.form=null;S.armed=null}
+
+const KEY='maemae-data-v1';
+function persist(){try{localStorage.setItem(KEY,JSON.stringify({projects:S.projects,costs:S.costs,set:S.set,savedAt:new Date().toISOString()}));return true}catch(e){toast('저장 공간에 쓰지 못했어요. 백업 파일을 저장해 두세요');return false}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d)apply(d)}catch(_){}}
+function apply(d){S.projects=Array.isArray(d.projects)?d.projects:[];S.costs=Array.isArray(d.costs)?d.costs:[];
+  if(d.set&&Array.isArray(d.set.brackets))S.set={deduction:+d.set.deduction||0,local:+d.set.local||0,brackets:d.set.brackets.map(b=>Array.isArray(b)?[+b[0]||0,+b[1]||0]:[+b.l||0,+b.r||0])}}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+async function put(col,id,data){const arr=col==='projects'?S.projects:S.costs;if(id){const i=arr.findIndex(x=>x.id===id);arr[i]={...data,id}}else arr.push({...data,id:uid()});persist();render();return true}
+async function del(col,id){const k=col==='projects'?'projects':'costs';S[k]=S[k].filter(x=>x.id!==id);persist();render()}
+function exportData(){const blob=new Blob([JSON.stringify({app:'maemae',version:1,exportedAt:new Date().toISOString(),projects:S.projects,costs:S.costs,set:S.set},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='매매프로젝트-백업-'+iso(new Date())+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  try{localStorage.setItem(KEY+'-lastbackup',new Date().toISOString())}catch(_){}render();toast('백업 파일을 저장했어요')}
+function lastBackup(){try{return localStorage.getItem(KEY+'-lastbackup')}catch(_){return null}}
+
+function pForm(p={}){S.form={k:'p',id:p.id||null};const m=v=>v?(+v).toLocaleString():'';
+  const f=(id,l,n,v,t='text')=>`<div><label for="${id}">${l}</label><input id="${id}" name="${n}" ${t==='date'?'type="date"':'class="money" inputmode="numeric"'} value="${esc(v)}"></div>`;
+  openSheet(`<h2>${p.id?'프로젝트 수정':'새 프로젝트'}</h2><form id="f">
+  <label for="p-n">프로젝트 이름</label><input id="p-n" name="name" required value="${esc(p.name)}" placeholder="예: ○○동 빌라 101호">
+  <label for="p-s">상태</label><select id="p-s" name="status">${STATUS.map(s=>`<option ${s===(p.status||'진행중')?'selected':''}>${s}</option>`).join('')}</select>
+  <div class="two">${f('p-bd','매입일','buyDate',p.buyDate||'','date')}${f('p-bp','매입가','buyPrice',m(p.buyPrice))}</div>
+  <div class="two">${f('p-pd','계획 매도일','planSellDate',p.planSellDate||'','date')}${f('p-pp','계획 매도가','planSellPrice',m(p.planSellPrice))}</div>
+  <div class="two">${f('p-sd','실제 매도일','sellDate',p.sellDate||'','date')}${f('p-sp','실제 매도가','sellPrice',m(p.sellPrice))}</div>
+  <label for="p-rg">지역</label><select id="p-rg" name="region">${Object.entries(REG).map(([v,l])=>`<option value="${v}" ${v===(p.region||'비수도권')?'selected':''}>${l}</option>`).join('')}</select>
+  <div class="two"><div><label for="p-hb">취득 때 주택 수 (이 집 포함)</label><input id="p-hb" name="housesBuy" inputmode="numeric" value="${p.housesBuy||1}"></div><div><label for="p-hs">매도 때 주택 수 (이 집 포함)</label><input id="p-hs" name="housesSell" inputmode="numeric" value="${p.housesSell||1}"></div></div>
+  <div class="two"><div><label for="p-o8">전용면적</label><select id="p-o8" name="over85">${[['이하','85㎡ 이하'],['초과','85㎡ 초과']].map(([v,l])=>`<option value="${v}" ${v===(p.over85||'이하')?'selected':''}>${l}</option>`).join('')}</select></div><div><label for="p-lp">공시가 1억 이하</label><select id="p-lp" name="lowPrice">${['아니오','예'].map(v=>`<option ${v===(p.lowPrice||'아니오')?'selected':''}>${v}</option>`).join('')}</select></div></div>
+  <div class="two">${f('p-lt','장기보유특별공제','lt',m(p.lt))}<div></div></div>
+  <div class="two"><div><label for="p-v">부가세</label><select id="p-v" name="vat">${['면세','과세'].map(s=>`<option ${s===(p.vat||'면세')?'selected':''}>${s}</option>`).join('')}</select></div>${f('p-vb','건물분 공급가액','vatBase',m(p.vatBase))}</div>
+  <label for="p-vi">부가세를 매도가에</label><select id="p-vi" name="vatIncl">${[['별도','별도로 받음 (매도가 + 부가세)'],['포함','포함해서 받음']].map(([v,l])=>`<option value="${v}" ${v===(p.vatIncl||'별도')?'selected':''}>${l}</option>`).join('')}</select>
+  <p class="note" style="margin:10px 2px 0">85㎡ 이하 주택은 보통 면세, 85㎡ 초과 주택과 오피스텔·상가는 건물분이 과세예요.</p>
+  <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div>
+  ${p.id?`<button class="btn warn" type="button" data-delp="${esc(p.id)}" style="width:100%;margin-top:10px">프로젝트 삭제</button>`:''}</form>`)}
+function cForm(pid){S.form={k:'c'};openSheet(`<h2>비용 기록</h2><form id="f">
+  <label for="c-p">프로젝트</label><select id="c-p" name="pid"><option value="">공통 (여러 건에 같이)</option>${sorted().map(p=>`<option value="${esc(p.id)}" ${p.id===pid?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+  <div class="two"><div><label for="c-d">날짜</label><input id="c-d" type="date" name="date" value="${iso(new Date())}"></div><div><label for="c-a">금액</label><input id="c-a" class="money" inputmode="numeric" name="amount" required></div></div>
+  <label for="c-i">항목</label><input id="c-i" name="item" placeholder="예: 욕실 타일 자재">
+  <div class="two"><div><label for="c-c">구분</label><select id="c-c" name="cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div><div><label for="c-e">공제</label><select id="c-e" name="ded">${DEDS.map(c=>`<option>${c}</option>`).join('')}</select></div></div>
+  <p class="note" style="margin:12px 2px 0">필요경비: 팔 때 예정신고에서 빠지는 비용(취득세·자재·공사·중개) · 사업경비: 연말 종합소득세에서만 빠지는 비용(이자·기장료)</p>
+  <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`)}
+
+document.addEventListener('input',e=>{const t=e.target;if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():''}
+  if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();
+  if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
+  if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
+document.addEventListener('change',e=>{if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';f.text().then(t=>{let d;try{d=JSON.parse(t)}catch(_){toast('백업 파일을 읽지 못했어요');return}
+  if(!d||!Array.isArray(d.projects)){toast('매매 프로젝트 백업 파일이 아니에요');return}S.pending=d;
+  openSheet(`<h2>백업 불러오기</h2><p class="sub">프로젝트 ${d.projects.length}건, 비용 ${(d.costs||[]).length}건이 들어 있어요${d.exportedAt?' ('+esc(String(d.exportedAt).slice(0,10))+' 백업)':''}. 지금 앱에 있는 데이터는 이 백업으로 바뀌어요.</p><div class="acts"><button class="btn pri" data-impok>불러오기</button><button class="btn" data-close>취소</button></div>`)})}if(e.target.id==='m-r'&&e.target.value==='없음'){const d=$('#m-e');if(d)d.value='불공제'}if(e.target.id==='c-c'){const d=$('#c-e');if(d&&CAT_DED[e.target.value])d.value=CAT_DED[e.target.value]}if(S.view==='tax'&&(e.target.dataset.bl||e.target.dataset.br))render()});
+document.addEventListener('submit',async e=>{e.preventDefault();const fd=Object.fromEntries(new FormData(e.target));if(!S.form)return;
+  if(S.form.k==='p'){const d={name:fd.name.trim(),status:fd.status,buyDate:fd.buyDate,buyPrice:num(fd.buyPrice),planSellDate:fd.planSellDate,planSellPrice:num(fd.planSellPrice),sellDate:fd.sellDate,sellPrice:num(fd.sellPrice),lt:num(fd.lt),region:fd.region,housesBuy:Math.max(1,num(fd.housesBuy)),housesSell:Math.max(1,num(fd.housesSell)),over85:fd.over85,lowPrice:fd.lowPrice,vat:fd.vat,vatBase:num(fd.vatBase),vatIncl:fd.vatIncl};
+    if(d.sellDate&&d.sellPrice&&d.status==='진행중')d.status='완료';if(await put('projects',S.form.id,d)){closeSheet();toast('저장했어요')}}
+  else if(S.form.k==='m'){const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'자재비',store:fd.store.trim(),qty:num(fd.qty),unit:fd.unit.trim(),unitPrice:num(fd.unitPrice),amount:num(fd.amount),receipt:fd.receipt,ded:fd.ded};
+    if(!d.amount){toast('금액이나 수량·단가를 넣어 주세요');return}if(await put('costs',null,d)){closeSheet();toast('자재를 기록했어요')}}
+  else{const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:fd.cat,amount:num(fd.amount),ded:fd.ded};if(!d.amount){toast('금액을 넣어 주세요');return}if(await put('costs',null,d)){closeSheet();toast('비용을 기록했어요')}}});
+document.addEventListener('click',async e=>{const t=e.target.closest('button,[data-open]');if(e.target.id==='sheet'){closeSheet();return}if(!t)return;const ds=t.dataset;
+  if(ds.go){S.view=ds.go;S.armed=null;if(ds.go!=='tax')S.draft=null;render();scrollTo(0,0)}
+  else if(ds.open){S.pid=ds.open;S.view='detail';closeSheet();render();scrollTo(0,0)}
+  else if('newp' in ds)pForm();
+  else if('export' in ds)exportData();
+  else if('import' in ds)$('#imp').click();
+  else if('impok' in ds){apply(S.pending);S.pending=null;persist();closeSheet();S.view='home';render();toast('백업을 불러왔어요')}
+  else if(ds.editp!==undefined)pForm(S.projects.find(p=>p.id===ds.editp));
+  else if(ds.addcost!==undefined)cForm(ds.addcost);
+  else if(ds.addmat!==undefined)mForm(ds.addmat||(S.view==='detail'?S.pid:''));
+  else if(ds.again){const c=S.costs.find(x=>x.id===ds.again);if(c)mForm(c.pid,c)}
+  else if('close' in ds)closeSheet();
+  else if(ds.delcost){if(S.armed!==ds.delcost){S.armed=ds.delcost;render();return}S.armed=null;await del('costs',ds.delcost);toast('삭제했어요')}
+  else if(ds.delp){if(S.armed!==ds.delp){S.armed=ds.delp;t.textContent='한 번 더 누르면 비용 기록까지 삭제돼요';return}const id=ds.delp;closeSheet();
+    for(const c of S.costs.filter(c=>c.pid===id))await del('costs',c.id);await del('projects',id);S.view='home';render();toast('삭제했어요')}
+  else if(ds.yr){S.year+=+ds.yr;render()}
+  else if(ds.bdel!==undefined){S.draft.brackets.splice(+ds.bdel,1);render()}
+  else if('badd' in ds){const b=S.draft.brackets,last=b[b.length-1]||[0,0];b.push([last[0]*2||1e7,last[1]]);render()}
+  else if('treset' in ds){S.draft={deduction:DEF.deduction,local:DEF.local,brackets:DEF.brackets.map(r=>[...r])};render();toast('기본값을 불러왔어요. 저장을 눌러 적용하세요')}
+  else if('tsave' in ds){const d={deduction:S.draft.deduction,local:S.draft.local,brackets:S.draft.brackets.map(([l,r])=>({l,r}))};
+    S.set={...S.set,deduction:d.deduction,local:d.local,brackets:S.draft.brackets.map(r=>[...r])};persist();
+    S.draft=null;render();toast('세율을 저장했어요')}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+
+load();S.mode='ready';render();
+try{navigator.storage?.persist?.()}catch(_){}
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
