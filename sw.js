@@ -1,5 +1,5 @@
 // 오프라인 캐시. 앱을 고치면 VERSION 숫자를 올려야 폰에 새 버전이 반영돼요.
-const VERSION = 'maemae-v1';
+const VERSION = 'maemae-v3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
