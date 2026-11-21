@@ -102,6 +102,7 @@ details.bd summary{list-style:none;cursor:pointer}details.bd summary::-webkit-de
 details.rki{border-top:1px solid var(--line);padding:12px 0}details.rki:first-of-type{margin-top:8px}details.rki summary{display:flex;align-items:center;gap:6px;list-style:none;cursor:pointer;font-size:15px}details.rki summary::-webkit-details-marker{display:none}details.rki summary b{white-space:nowrap}
 details.rki .sub{margin:8px 0 0 18px;font-size:14px}details.rki .how{margin:6px 0 0 18px;font-size:14px;color:var(--blue)}
 .rline{display:block;font-size:14px;padding:6px 0;color:inherit}
+.tg{width:46px;height:28px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .2s}.tg i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}.tg.on{background:var(--blue)}.tg.on i{left:21px}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 .note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
@@ -278,7 +279,9 @@ function manage(){const ps=sorted(),common=S.costs.filter(c=>!c.pid).sort((a,b)=
   <div class="card"><div class="sub">데이터는 이 폰에만 저장돼요. 폰을 바꾸거나 앱을 지우기 전에 꼭 백업하세요.${(()=>{const b=lastBackup();return b?' · 마지막 백업 '+b.slice(0,10):' · <b style="color:var(--rose)">아직 백업 안 함</b>'})()}</div>
   <div class="two" style="margin-top:12px"><button class="btn pri" data-export>백업 저장</button><button class="btn" data-import>백업 불러오기</button></div>
   <button class="btn" data-xlsx style="width:100%;margin-top:10px">엑셀로 내보내기 (.xlsx)</button><div class="sub" style="margin-top:6px;font-size:12px">프로젝트 · 비용 내역 · 작업 인원 · 자재 단가 · 연간 정산 시트로 나눠 저장돼요. 엑셀 파일은 보기용이고, 복구는 백업 파일로 해요.</div>
-  <input type="file" id="imp" accept="application/json,.json" hidden></div>`}
+  <input type="file" id="imp" accept="application/json,.json" hidden></div>
+  <div class="sec">설정</div>
+  <div class="card"><button class="lib row" data-vib style="justify-content:space-between;min-height:44px"><span><b style="font-size:15px">진동 피드백</b><div class="sub">버튼·저장·삭제할 때 짧게 진동 (안드로이드)</div></span><span class="tg${vibOn()?' on':''}"><i></i></span></button></div>`}
 
 function annual(y){const inY=s=>s&&+String(s).slice(0,4)===y;const sold=S.projects.filter(p=>inY(p.sellDate)&&(+p.sellPrice||0)>0).map(p=>({p,c:calc(p)}));
   const sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);const biz=sum(S.costs.filter(c=>c.ded==='사업경비'&&inY(c.date)),c=>+c.amount||0),common=sum(S.costs.filter(c=>!c.pid&&inY(c.date)),c=>+c.amount||0);
@@ -465,8 +468,10 @@ function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d)a
 function apply(d){S.projects=Array.isArray(d.projects)?d.projects:[];S.costs=Array.isArray(d.costs)?d.costs.map(norm):[];
   if(d.set&&Array.isArray(d.set.brackets))S.set={deduction:+d.set.deduction||0,local:+d.set.local||0,brackets:d.set.brackets.map(b=>Array.isArray(b)?[+b[0]||0,+b[1]||0]:[+b.l||0,+b.r||0])}}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-async function put(col,id,data){const arr=col==='projects'?S.projects:S.costs;if(id){const i=arr.findIndex(x=>x.id===id);if(i<0)arr.push({...data,id});else arr[i]={...data,id}}else arr.push({...data,id:uid()});persist();render();return true}
-async function del(col,id){const k=col==='projects'?'projects':'costs';S[k]=S[k].filter(x=>x.id!==id);persist();render()}
+const vibOn=()=>{try{return localStorage.getItem('fixfolio-vib')!=='off'}catch(_){return true}};
+function buzz(p){if(!vibOn()||!navigator.vibrate)return;try{navigator.vibrate(p)}catch(_){}}
+async function put(col,id,data){buzz([12,40,18]);const arr=col==='projects'?S.projects:S.costs;if(id){const i=arr.findIndex(x=>x.id===id);if(i<0)arr.push({...data,id});else arr[i]={...data,id}}else arr.push({...data,id:uid()});persist();render();return true}
+async function del(col,id){buzz(35);const k=col==='projects'?'projects':'costs';S[k]=S[k].filter(x=>x.id!==id);persist();render()}
 const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRCT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
 function zipStore(files){const te=new TextEncoder(),parts=[],cen=[];let off=0;
@@ -588,7 +593,7 @@ function wzRender(){const d=S.wiz.d,vis=wzVis(),i=Math.max(0,vis.findIndex(s=>s.
   if(st.k==='crew'||st.k==='extra')wkTotal();wzHint();const fi=$('#wz input:not([type=date])');if(fi&&!st.ch)setTimeout(()=>fi.focus(),60)}
 function wzGo(n){const vis=wzVis(),i=vis.findIndex(s=>s.k===S.wiz.k),j=i+n;if(j<0){closeSheet();S.wiz=null;return}S.wiz.k=vis[Math.min(j,vis.length-1)].k;wzRender()}
 async function wzNext(form,sub){const vis=wzVis(),st=vis.find(s=>s.k===S.wiz.k);if(st.r)Object.assign(S.wiz.d,st.r(Object.fromEntries(new FormData(form)),form,S.wiz.d));
-  const err=st.v&&st.v(wzCtx(S.wiz.d));if(err){toast(err);return}
+  const err=st.v&&st.v(wzCtx(S.wiz.d));if(err){buzz([30,60,30]);toast(err);return}
   if(st.save){await st.save(S.wiz.d,sub);return}
   if(st.k==='done'){const {id,...data}=wzProj(S.wiz.d);if(await put('projects',null,data)){closeSheet();S.wiz=null;S.view='home';render();toast('프로젝트를 만들었어요')}return}wzGo(1)}
 function wzHint(){const h=$('#w-hint');if(!h||!S.wiz)return;const d={...S.wiz.d},k=S.wiz.k;
@@ -676,7 +681,8 @@ document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==
   else if(S.form.k==='m'){const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'자재비',store:fd.store.trim(),qty:num(fd.qty),unit:fd.unit.trim(),unitPrice:num(fd.unitPrice),amount:num(fd.amount),receipt:fd.receipt,ded:fd.ded};
     if(!d.amount){toast('금액이나 수량·단가를 넣어 주세요');return}S.lastPid=fd.pid;const eid=S.form.id;if(await put('costs',eid||null,d)){if(eid){closeSheet();toast('수정했어요')}else if(e.submitter&&'more' in e.submitter.dataset){mForm(fd.pid,{pid:fd.pid,date:fd.date,store:d.store,receipt:fd.receipt});toast(d.item+' 저장 · 다음 자재를 넣으세요')}else{closeSheet();toast('자재를 기록했어요')}}}
   else{const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:fd.cat,amount:num(fd.amount),ded:fd.ded};if(!d.amount){toast('금액을 넣어 주세요');return}S.lastPid=fd.pid;const eid=S.form.id;if(await put('costs',eid||null,d)){closeSheet();toast(eid?'수정했어요':'비용을 기록했어요')}}});
-document.addEventListener('click',async e=>{const t=e.target.closest('button,[data-open]');if(e.target.id==='sheet'){closeSheet();return}if(!t)return;const ds=t.dataset;
+document.addEventListener('click',async e=>{const t=e.target.closest('button,[data-open]');if(e.target.id==='sheet'){closeSheet();return}if(!t)return;const ds=t.dataset;if(t.getAttribute('type')!=='submit')buzz(8);
+  if('vib' in ds){try{localStorage.setItem('fixfolio-vib',vibOn()?'off':'on')}catch(_){}buzz(20);render();return}
   if(ds.go){S.view=ds.go;S.armed=null;if(ds.go!=='tax')S.draft=null;render();scrollTo(0,0)}
   else if(ds.open){S.pid=ds.open;S.view='detail';closeSheet();render();scrollTo(0,0)}
   else if('newp' in ds)wzStart();
