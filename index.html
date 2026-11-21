@@ -98,6 +98,10 @@ details.bd summary{list-style:none;cursor:pointer}details.bd summary::-webkit-de
 .qa{display:flex;align-items:center;gap:14px;width:100%;border:0;background:var(--soft);border-radius:18px;padding:14px;margin-top:10px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;min-height:68px}.qa b{display:block;font-size:16px}.qa small{color:var(--mute);font-size:13px}.qa .ico{background:var(--card)}
 .acts4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:-6px 0 16px}.apill{border:0;border-radius:14px;background:var(--card);font:inherit;font-size:14px;font-weight:600;min-height:46px;color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(20,25,35,.05)}.apill:first-child,.apill:nth-child(2){color:var(--blue)}
 .lib{width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;padding-left:0;padding-right:0}button.li{border-top:1px solid var(--line)}button.li:first-child{border-top:0}.chev{color:var(--mute);display:flex}
+.rdot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;margin-right:10px}.rdot.r{background:var(--rose)}.rdot.a{background:var(--amber)}.rdot.g{background:var(--slate)}
+details.rki{border-top:1px solid var(--line);padding:12px 0}details.rki:first-of-type{margin-top:8px}details.rki summary{display:flex;align-items:center;gap:6px;list-style:none;cursor:pointer;font-size:15px}details.rki summary::-webkit-details-marker{display:none}details.rki summary b{white-space:nowrap}
+details.rki .sub{margin:8px 0 0 18px;font-size:14px}details.rki .how{margin:6px 0 0 18px;font-size:14px;color:var(--blue)}
+.rline{display:block;font-size:14px;padding:6px 0;color:inherit}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 .note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
@@ -166,13 +170,14 @@ function calc(p){const cs=S.costs.filter(c=>c.pid===p.id);const sum=k=>cs.filter
   const nat=cmp?Math.max(basicNat,yang):basicNat,t=nat*L;
   const method=!cmp?'종소세 기본세율':yang>basicNat?'양도세 방식 ('+why+')':'종소세 방식 (더 큼)';
   return{rent,cs,need,biz,non,buy,gross,sell,sold,vatAmt,vatIn,hold,cost,pre,taxable,basicNat,preTax:basicNat*L,cmp,yang,yangNat:cmp?yang:0,nat,method,yrs,acq,hasAcq,acqAuto,tax:t,after:pre-t,roi:cost?(pre-t)/cost:NaN}}
-const TYPES=['아파트','주택(빌라·단독)','오피스텔','상가'];const isHouse=p=>!p.type||p.type==='아파트'||p.type==='주택(빌라·단독)';
+const TYPES=['아파트','주택(빌라·단독)','오피스텔','상가'];const big85=p=>+p.area?+p.area>85:p.over85==='초과',pyeong=a=>(a/3.3058).toFixed(1);
+const isHouse=p=>!p.type||p.type==='아파트'||p.type==='주택(빌라·단독)';
 function rentCalc(p,from,to){if(!p.rentType||p.rentType==='없음'||!p.rentStart)return{m:0,inc:0};const s=day(p.rentStart),sd=day(p.sellDate);
   let e=day(p.rentEnd)||sd||day(p.planSellDate)||today();if(sd&&sd<e)e=sd;const a=from&&from>s?from:s,b=to&&to<e?to:e,m=Math.max(0,dd(a,b)/30.4375);return{m,inc:Math.round(m*(+p.monthly||0))}}
 function personal(p,c){const y=c.yrs,house=isHouse(p),hs=+p.housesSell||1,heavy=house&&p.region==='규제'&&hs>=2,g=Math.max(0,c.sell-c.buy-c.need);
   const ltr=!heavy&&y>=3?Math.min(.3,.06+.02*(Math.floor(y)-3)):0,amt=Math.max(0,g*(1-ltr)-2.5e6),short=house?(y<1?.7:y<2?.6:0):(y<1?.5:y<2?.4:0),sur=heavy?(hs>=3?.3:.2):0;
   return{t:Math.max(amt*short,tax(amt)+amt*sur)*(1+S.set.local/100),short,sur,ltr}}
-function acqTax(p){const P=+p.buyPrice||0;if(!P)return{rate:0,tot:0,total:0,heavy:0};if(!isHouse(p))return{rate:4,tot:4.6,total:Math.round(P*.046),heavy:0};const n=+p.housesBuy||1,reg=p.region||'비수도권',big=p.over85==='초과';
+function acqTax(p){const P=+p.buyPrice||0;if(!P)return{rate:0,tot:0,total:0,heavy:0};if(!isHouse(p))return{rate:4,tot:4.6,total:Math.round(P*.046),heavy:0};const n=+p.housesBuy||1,reg=p.region||'비수도권',big=(+p.area?+p.area>85:p.over85==='초과');
   let heavy=0;if(p.lowPrice!=='예'){heavy=reg==='규제'?(n>=3?12:n===2?8:0):(n>=4?12:n===3?8:0)}
   let r,edu,farm;if(heavy){r=heavy;edu=.4;farm=big?(heavy===8?.6:1):0}else{r=P<=6e8?1:P<=9e8?(P/1e8*2/3-3):3;edu=r*.1;farm=big?.2:0}
   const tot=r+edu+farm;return{rate:r,tot,total:Math.round(P*tot/100),heavy}}
@@ -196,15 +201,37 @@ const legend=ps=>`<div class="lg">${ps.filter(p=>p.v>0).map(p=>`<span><i style="
 const parts=c=>[{l:'매입가',v:c.buy,c:COL.buy},{l:'필요경비',v:c.need,c:COL.need},{l:'기타비용',v:c.biz+c.non,c:COL.etc},{l:'세금',v:c.tax+c.vatIn,c:COL.tax},{l:'세후 이익',v:Math.max(0,c.after),c:COL.gain}];
 const sorted=()=>[...S.projects].sort((a,b)=>(a.status==='진행중'?0:1)-(b.status==='진행중'?0:1)||String(b.buyDate||'').localeCompare(String(a.buyDate||'')));
 
+function risks(p){const c=calc(p),L=1+S.set.local/100,out=[],add=(lv,t,amt,d,how)=>out.push({lv,t,amt,d,how}),b=day(p.buyDate),T=today();
+  if(c.cmp&&c.yang>c.basicNat)add('r','비교과세로 소득세가 늘어요',(c.yang-c.basicNat)*L,'규제지역 다주택 매도라 종소세와 양도세 방식 중 큰 쪽을 내요.','비규제지역 물건이거나, 팔 때 주택 수가 1채면 피할 수 있어요.');
+  if(c.cmp&&!p.sellDate&&b)for(const th of[365,730]){if(c.yrs*365<th){const dt=new Date(b);dt.setDate(dt.getDate()+th+1);const c2=calc({...p,planSellDate:iso(dt)}),sv=c.tax-c2.tax;if(sv>1e4){add('r',`${dd(day(p.planSellDate)||T,dt)>0?dd(day(p.planSellDate)||T,dt)+'일 ':''}더 보유하면 단기세율이 내려가요`,sv,`보유 ${th===365?'1년':'2년'}을 넘기면 양도세 방식 세율이 ${th===365?'70%→60%':'60%→기본세율'}로 내려가요.`,`잔금을 ${iso(dt)} 이후로 잡으면 이만큼 덜 내요.`);break}}}
+  if(c.acq.heavy){const base=acqTax({...p,lowPrice:'예'}).total;add('r',`취득세 중과 ${c.acq.heavy}%`,c.acq.total-base,`취득할 때 주택 수 ${+p.housesBuy||1}채라 기본세율 대신 중과가 붙어요.`,'공시가 1억 이하 주택, 비규제지역(3주택 미만) 물건은 중과가 없어요.')}
+  if(c.non>0){const r=Math.max(bk(Math.max(c.taxable,1)).rate,.06);add('a','증빙 없는 비용이 있어요',c.non*r*L,`불공제 ${won(c.non)}은 경비로 인정받지 못해요.`,'카드·현금영수증·세금계산서를 받거나, 인건비는 원천세 신고를 하세요.')}
+  const bad=c.cs.filter(x=>x.ded==='필요경비'&&(WORK_BIZ.includes(x.item)||MAT_BIZ.includes(x.item)));if(bad.length){const s=bad.reduce((a,x)=>a+(+x.amount||0),0);add('a',`수리성 비용 ${bad.length}건을 필요경비로 넣었어요`,(tax(c.taxable+s)-tax(c.taxable))*L,`${uniq(bad.map(x=>x.item)).slice(0,3).join(', ')} 등 ${won(s)}은 예정신고 때 인정받지 못할 수 있어요.`,'도배·장판·도장 같은 수리는 사업경비로 바꾸면 5월 정산에서 빠져요.')}
+  if(!p.sellDate&&p.planSellDate&&c.taxable>0){const y=+p.planSellDate.slice(0,4),A=annual(y),B=annual(y+1);if(A.sold.length){const inc=X=>tax(Math.max(0,X.income+c.taxable-S.set.deduction))-tax(X.base),sv=(inc(A)-inc(B))*L;if(sv>1e4)add('a',`${y}년 다른 매도와 합쳐져 세율 구간이 올라가요`,sv,`${y}년에 이미 ${A.sold.length}건을 팔아서 이 건이 더 높은 구간에 걸려요.`,`잔금을 ${y+1}년 1월 이후로 미루면 이만큼 덜 내요 (5월 정산 기준).`)}}
+  const dl=deadlines(p);if(dl&&p.sellDate){const l=dd(T,day(dl.pre));if(l>=0&&l<=30)add('r',`소득세 예정신고 마감 D-${l}`,0,`매도일(${p.sellDate}) 기준 마감일은 ${dl.pre}예요.`,'기한을 넘기면 무신고·납부지연 가산세가 붙어요.');else if(l<0&&l>-120)add('a','예정신고 기한이 지났어요',0,`마감일 ${dl.pre}.`,'아직 안 했다면 바로 기한 후 신고하세요. 1개월 안에 하면 무신고 가산세가 50% 줄어요.');
+    if(p.vat==='과세'){const v=dd(T,day(dl.vat));if(v>=0&&v<=30)add('r',`부가세 신고 마감 D-${v}`,0,`마감일 ${dl.vat}.`,'건물분 부가세와 세금계산서를 확인하세요.')}}
+  if((!isHouse(p)||big85(p))&&p.vat!=='과세')add('a','부가세 과세 대상일 수 있어요',0,`${!isHouse(p)?esc(p.type):'85㎡ 초과 주택'}은 팔 때 건물분에 부가세 10%가 붙어요.`,'프로젝트 수정에서 과세로 바꾸고 건물분 공급가액을 넣으세요. 안 받으면 내 돈으로 내야 해요.');
+  if(p.vat==='과세'&&!+p.vatBase)add('a','건물분 공급가액이 비어 있어요',0,'과세로 설정했지만 부가세 계산 기준이 없어요.','매도가 중 건물분 금액을 넣으세요.');
+  const j=juneInfo(p);if(j&&j.risk)add('a',`${j.year}년 재산세가 나올 예정이에요`,0,j.plan?'계획 매도일이 6월 1일 이후예요.':'매도 계획일이 없어요.',`${j.dl}까지 잔금을 받으면 피할 수 있어요 (D-${j.left}).`);
+  if(p.rentType==='장기임대')add('a','장기임대는 사업성 인정이 흔들릴 수 있어요',0,'오래 임대하면 매매용 재고가 아니라 임대용 자산으로 볼 수 있어요.','개인 양도세로 과세되면 단기세율이 붙을 수 있으니 세무사와 확인하세요.');
+  const wk=c.cs.filter(x=>x.kind==='work'&&String(x.receipt).startsWith('계좌이체'));if(wk.length)add('g',`인건비 ${wk.length}건은 원천세 신고가 필요해요`,0,'일용직에게 준 인건비는 원천세를 신고해야 경비로 인정돼요.','지급한 달의 다음 달 10일까지 홈택스에서 신고하세요.');
+  if(isHouse(p)&&!+p.area)add('g','전용면적을 넣어 주세요',0,'85㎡ 기준으로 취득세 농특세와 부가세가 달라져요.','프로젝트 수정에서 전용면적(㎡)을 넣으세요.');
+  if(!+p.planSellPrice&&!+p.sellPrice)add('g','매도 계획가가 없어요',0,'세금과 수익률 계산이 0으로 나와요.','프로젝트 수정에서 계획 매도가를 넣으세요.');
+  const o={r:0,a:1,g:2};return out.sort((x,y)=>o[x.lv]-o[y.lv]||(y.amt||0)-(x.amt||0))}
+function riskCard(p){const rs=risks(p),n=rs.filter(x=>x.lv!=='g').length;
+  if(!rs.length)return `<div class="alert ok"><b>세금 체크: 특별한 주의 사항 없음</b>지금 입력된 내용으로는 세금이 늘어날 요소가 보이지 않아요.</div>`;
+  return `<div class="card rk" style="margin-top:12px"><div class="row" style="justify-content:space-between"><b style="font-size:16px">세금 체크</b><span class="sub">${n?`주의 ${n}건`:'참고 '+rs.length+'건'}</span></div>
+  ${rs.map(r=>`<details class="rki"><summary><i class="rdot ${r.lv}"></i><span class="grow">${r.t}</span>${r.amt>1e4?`<b class="${r.lv==='r'?'dn':''}">+${won(r.amt)}</b>`:''}</summary><div class="sub">${r.d}</div><div class="how">${r.how}</div></details>`).join('')}
+  <div class="sub" style="font-size:12px;margin-top:10px">2026년 11월 세법 기준 추정치예요. 금액이 큰 항목은 세무사 확인을 권해요.</div></div>`}
 function pcard(p){const c=calc(p),pr=progress(p),ok=c.after>=0,j=juneInfo(p);
-  return `<button class="card pcard" data-open="${esc(p.id)}"><div class="row"><div class="ico">${icon('house')}</div><div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.type||'아파트')} · ${esc(p.status||'진행중')} · ${pr.label}</div>${j&&j.risk?`<span class="wpill">재산세 주의 · 6/1까지 D-${j.left}</span>`:''}</div><div><div class="amt">${won(c.after)}</div><span class="pill ${ok?'up':'dn'}">${ok?'↗':'↘'} ${pct(c.roi)}</span></div></div><div class="bar"><i style="width:${pr.pct}%;background:${ok?'var(--green)':'var(--rose)'}"></i></div></button>`}
+  return `<button class="card pcard" data-open="${esc(p.id)}"><div class="row"><div class="ico">${icon('house')}</div><div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.type||'아파트')} · ${esc(p.status||'진행중')} · ${pr.label}</div>${(()=>{const n=risks(p).filter(x=>x.lv!=='g').length;return n?`<span class="wpill">세금 주의 ${n}</span>`:''})()}</div><div><div class="amt">${won(c.after)}</div><span class="pill ${ok?'up':'dn'}">${ok?'↗':'↘'} ${pct(c.roi)}</span></div></div><div class="bar"><i style="width:${pr.pct}%;background:${ok?'var(--green)':'var(--rose)'}"></i></div></button>`}
 
 function home(){const ps=sorted(),cs=ps.map(calc),T=k=>cs.reduce((a,c)=>a+c[k],0);
   const agg={buy:T('buy'),need:T('need'),biz:T('biz'),non:T('non'),tax:T('tax'),vatIn:T('vatIn'),after:T('after')},cost=T('cost');
   return `<h1>Fixfolio</h1>
   <button class="big" data-go="manage"><div class="ico">${icon('grid')}</div><span class="grow"><b>프로젝트 관리</b><small>새 프로젝트 · 수정 · 백업</small></span>${icon('chev')}</button>
   <div class="card" style="margin-top:14px">${ring(parts(agg),won(agg.after),'세후 예상 이익 · '+ps.length+'건')}${legend(parts(agg))}<div class="sub" style="text-align:center;margin-top:4px">총 투입 ${won(cost)} · 평균 수익률 ${cost?pct(agg.after/cost):'–'}</div></div>
-  ${(()=>{const r=ps.filter(p=>juneInfo(p)?.risk);return r.length?`<div class="alert"><b>재산세 주의 ${r.length}건</b>6월 1일에 갖고 있을 예정인 프로젝트예요. 6월 1일까지 잔금을 받으면 그해 재산세가 안 나와요.</div>`:''})()}
+  ${(()=>{const r=ps.map(p=>({p,r:risks(p).filter(x=>x.lv!=='g')})).filter(x=>x.r.length);return r.length?`<div class="alert"><b>세금 주의 ${r.reduce((a,x)=>a+x.r.length,0)}건</b>${r.map(x=>`<button class="lib rline" data-open="${esc(x.p.id)}">${esc(x.p.name)} · ${x.r[0].t}${x.r.length>1?` 외 ${x.r.length-1}건`:''} ›</button>`).join('')}</div>`:''})()}
   <div class="sec">프로젝트별</div>
   <div class="list">${ps.length?ps.map(pcard).join(''):`<div class="card empty">아직 프로젝트가 없어요.<br><button class="btn pri" data-newp style="margin-top:12px">새 프로젝트 만들기</button></div>`}</div>
   ${(()=>{const r=[...S.costs].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5);return r.length?`<div class="sec">최근 기록</div><div class="card">${r.map(costRow).join('')}</div><button class="btn" data-go="site" style="width:100%;margin-top:10px">현장 기록에서 전체 보기</button>`:''})()}`}
@@ -217,12 +244,11 @@ function detail(){const p=S.projects.find(x=>x.id===S.pid);if(!p){S.view='home';
   <h1 style="margin-top:0">${esc(p.name)}</h1>
   <div class="acts4"><button class="apill" data-addmat="${esc(p.id)}">+ 자재</button><button class="apill" data-addwork="${esc(p.id)}">+ 작업</button><button class="apill" data-addcost="${esc(p.id)}">+ 비용</button><button class="apill" data-editp="${esc(p.id)}">수정</button></div>
   <div class="card">${ring(parts(c),won(c.after),'세후 이익 · 수익률 '+pct(c.roi))}${legend(parts(c))}</div>
-  ${(()=>{const j=juneInfo(p);if(!j)return'';if(j.risk)return `<div class="alert"><b>${j.year}년 재산세가 나올 예정이에요</b>${j.plan?'계획 매도일이 6월 1일 이후예요. ':'매도 계획일이 없어요. '}${j.dl}까지 잔금을 받으면 피할 수 있어요 · D-${j.left}</div>`;
-    return `<div class="alert ok"><b>${j.year}년 재산세 없음</b>계획대로 6월 1일 전에 팔면 안 나와요 · 잔금 마감 ${j.dl} (D-${j.left})</div>`})()}
+  ${riskCard(p)}
   <div class="sec">핵심 숫자</div>
   <div class="stats">${st('매도가'+(c.sold?'':' (계획)'),full(c.gross))}<button class="stat tap" data-costbd="${esc(p.id)}"><span>총 투입비 · 항목 보기 ›</span><b>${full(c.cost)}</b></button>${st('세전 이익',full(c.pre))}${st('과세 매매차익',full(c.taxable))}${st('예정신고 세액 (기본세율)',full(c.preTax))}${st('최종 소득세'+(c.cmp?' (비교과세)':''),full(c.tax))}${st(p.vat==='과세'?'부가세 · '+(c.vatIn?'매도가에 포함':'별도로 받음'):'부가세',p.vat==='과세'?full(c.vatAmt):'면세')}${st('보유세 (재산세·종부세)',full(c.hold))}${c.rent.inc?st('임대수입 (월세)',full(c.rent.inc)):''}${st('세후 이익',full(c.after),1)}</div>
   <div class="sec">세금 판단</div>
-  <div class="card">${[['유형',esc(p.type||'아파트')],['지역',REG[p.region||'비수도권']],...(isHouse(p)?[['주택 수 (취득 / 매도 때)',(+p.housesBuy||1)+'채 / '+(+p.housesSell||1)+'채']]:[]),['취득세율 (교육세·농특세 포함)',c.acq.total?c.acq.tot.toFixed(2)+'%'+(c.acq.heavy?' · 중과':''):'–'],['예상 취득세',c.hasAcq?'기록된 금액 사용':full(c.acq.total)+' (자동 반영 중)'],['보유 기간',c.yrs?c.yrs.toFixed(1)+'년'+(p.sellDate?'':' (계획 기준)'):'–'],['비교과세',c.cmp?'대상 · 규제지역 다주택':'대상 아님'],['적용 방식',c.method],['개인 명의였다면 (양도세)',full(pv.t)+(pv.short?' · 단기 '+pv.short*100+'%':'')]].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}
+  <div class="card">${[['유형',esc(p.type||'아파트')],...(+p.area?[['전용면적',`${+p.area}㎡ (약 ${pyeong(+p.area)}평)`]]:[]),['지역',REG[p.region||'비수도권']],...(isHouse(p)?[['주택 수 (취득 / 매도 때)',(+p.housesBuy||1)+'채 / '+(+p.housesSell||1)+'채']]:[]),['취득세율 (교육세·농특세 포함)',c.acq.total?c.acq.tot.toFixed(2)+'%'+(c.acq.heavy?' · 중과':''):'–'],['예상 취득세',c.hasAcq?'기록된 금액 사용':full(c.acq.total)+' (자동 반영 중)'],['보유 기간',c.yrs?c.yrs.toFixed(1)+'년'+(p.sellDate?'':' (계획 기준)'):'–'],['비교과세',c.cmp?'대상 · 규제지역 다주택':'대상 아님'],['적용 방식',c.method],['개인 명의였다면 (양도세)',full(pv.t)+(pv.short?' · 단기 '+pv.short*100+'%':'')]].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}
   <div class="sub" style="margin-top:6px">${pv.t>c.tax?'매매사업자로 하면 '+won(pv.t-c.tax)+' 덜 내요':pv.t<c.tax?'이 건은 개인 명의가 '+won(c.tax-pv.t)+' 덜 내요':'개인 명의와 세금이 같아요'} (보유 ${c.yrs?c.yrs.toFixed(1):0}년 기준)</div>
   ${c.cmp?`<div class="sub" style="margin-top:6px">종소세 방식 ${full(c.basicNat)} vs 양도세 방식 ${full(c.yang)} 중 큰 금액 (지방세 별도)</div>`:''}</div>
   ${p.rentType&&p.rentType!=='없음'?`<div class="sec">임대</div><div class="card">${[['임대 형태',esc(p.rentType)],['보증금',full(+p.deposit||0)],['월세',full(+p.monthly||0)],['임대 기간',(p.rentStart||'–')+' ~ '+(p.rentEnd||'매도 때까지')],['임대수입 합계',full(c.rent.inc)+' (약 '+c.rent.m.toFixed(1)+'개월)'],['실투자금 (총투입 − 보증금)',full(c.cost-(+p.deposit||0))],['실투자 대비 수익률',c.cost-(+p.deposit||0)>0?pct(c.after/(c.cost-(+p.deposit||0))):'–']].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}
@@ -266,6 +292,11 @@ function year(){const y=S.year,a=annual(y),kv=(k,v)=>`<div class="kv"><span>${k}
   <div class="yr"><button class="btn sm" data-yr="-1" aria-label="이전 연도">${icon('back',18)}</button><b>${y}년</b><button class="btn sm" data-yr="1" aria-label="다음 연도">${icon('chev',18)}</button></div>
   <div class="card hero"><span class="sub">${a.diff>=0?'5월 추가 납부 예상':'5월 환급 예상'}</span><b class="${a.diff>=0?'':'up'}">${won(Math.abs(a.diff))}</b><span class="sub">매도 ${a.sold.length}건 기준</span></div>
   <div class="stats" style="margin-top:12px"><div class="stat hi"><span>세후 순이익</span><b>${full(a.net)}</b></div><div class="stat"><span>수익률 (투입비 대비)</span><b>${pct(a.roi)}</b></div></div>
+  ${(()=>{const bs=[...S.set.brackets].sort((x,z)=>x[0]-z[0]),nx=bs.find(r=>r[0]>a.base),items=[];
+    if(nx&&a.base>0)items.push(['g',`다음 세율(${nx[1]}%)까지 과세표준 ${won(nx[0]-a.base)} 남았어요`,'이 금액을 넘는 차익은 더 높은 세율이 붙어요. 큰 건은 해를 나눠 팔면 유리할 수 있어요.']);
+    if(a.sold.length===1)items.push(['a','올해 매도가 1건이에요','거래 횟수가 적으면 매매사업자(사업성)로 인정받지 못하고 개인 양도세로 과세될 수 있어요.']);
+    for(const x of S.projects){const d=deadlines(x);if(d&&x.sellDate&&+x.sellDate.slice(0,4)===y){const l=dd(today(),day(d.pre));if(l>=0&&l<=60)items.push(['r',`${esc(x.name)} 예정신고 마감 D-${l}`,`마감일 ${d.pre}`])}}
+    return items.length?`<div class="sec">올해 체크</div><div class="card">${items.map(([lv,t,d])=>`<div class="kv" style="display:block"><div class="row"><i class="rdot ${lv}"></i><b style="text-align:left">${t}</b></div><div class="sub" style="margin:4px 0 0 18px">${d}</div></div>`).join('')}</div>`:''})()}
   <div class="sec">계산 과정</div>
   <div class="card">${kv('과세 매매차익 합계',full(a.taxable))}${a.rentY?kv('임대수입 (월세)',full(a.rentY)):''}${kv('사업경비',full(-a.biz))}${kv('사업소득금액',full(a.income))}${kv('소득공제',full(-S.set.deduction))}${kv('과세표준',full(a.base))}${kv('적용 세율 구간',Math.round(a.rate*100)+'%')}${a.alt?kv('기본세율 계산',full(a.normal))+kv('비교과세 계산',full(a.alt)):''}${kv('종합소득세'+(a.cmpUsed?' (비교과세 적용)':''),full(a.nat))}${kv('지방소득세',full(a.loc))}${kv('연간 총 세액',full(a.total))}${kv('예정신고 때 낸 세액',full(a.pre))}</div>
   <div class="sec">그 밖의 세금</div>
@@ -453,7 +484,10 @@ const WZ=[
  {k:'region',t:'어느 지역인가요?',s:'조정대상지역이면 다주택 중과와 비교과세가 붙을 수 있어요',ch:()=>Object.entries(REG),f:'region'},
  {k:'hb',show:isHouse,t:'이 집을 사면 집이 몇 채가 되나요?',s:'이 집 포함, 아파트·빌라·주거용 오피스텔을 세요',ch:()=>[['1','1채'],['2','2채'],['3','3채'],['4','4채 이상']],f:'housesBuy',num:1},
  {k:'hs',show:isHouse,t:'팔 때는 몇 채일 것 같나요?',s:'규제지역에서 2채 이상이면 세금이 크게 늘 수 있어요',ch:()=>[['1','1채'],['2','2채'],['3','3채'],['4','4채 이상']],f:'housesSell',num:1},
- {k:'o85',show:isHouse,t:'전용면적은요?',s:'85㎡(약 34평형)를 넘으면 농특세와 부가세가 붙어요',ch:()=>[['이하','85㎡ 이하'],['초과','85㎡ 초과']],f:'over85'},
+ {k:'o85',show:isHouse,t:'전용면적은 몇 ㎡인가요?',s:'등기부나 건축물대장의 전용면적이에요. 85㎡를 넘으면 농특세·부가세가 붙어요',
+  h:d=>`<label for="w-ar">전용면적 (㎡)</label><input id="w-ar" name="area" inputmode="decimal" value="${d.area||''}" placeholder="예: 84.97"><div class="chips uchips" style="margin-top:8px">${[59,74,84,99,114].map(a=>`<button type="button" class="chip" data-area="${a}">${a}㎡</button>`).join('')}</div>
+   <div class="sub" style="margin-top:14px">정확한 숫자를 모르면</div><div class="two" style="margin-top:6px"><button type="button" class="opt${d.over85==='이하'&&!d.area?' on':''}" data-wpick="이하" style="margin:0">85㎡ 이하</button><button type="button" class="opt${d.over85==='초과'&&!d.area?' on':''}" data-wpick="초과" style="margin:0">85㎡ 초과</button></div>`,
+  pick:(v,d)=>{d.over85=v;d.area=0},r:f=>{const a=num(f.area);return a?{area:a,over85:a>85?'초과':'이하'}:{}}},
  {k:'lp',show:isHouse,t:'공시가격이 1억 원 이하인가요?',s:'1억 이하 주택은 주택 수와 상관없이 취득세 기본세율이에요',ch:()=>yesno,f:'lowPrice'},
  {k:'buy',t:'언제, 얼마에 사나요?',s:'아직 안 샀으면 예정 날짜와 금액을 넣어요',h:d=>`<label for="w-bd">매입일</label><input id="w-bd" type="date" name="buyDate" value="${d.buyDate||''}"><label for="w-bp">매입가</label><input id="w-bp" class="money" inputmode="numeric" name="buyPrice" value="${d.buyPrice?(+d.buyPrice).toLocaleString():''}" placeholder="예: 200,000,000">`,r:f=>({buyDate:f.buyDate,buyPrice:num(f.buyPrice)}),v:d=>d.buyPrice?'':'매입가를 넣어 주세요'},
  {k:'plan',t:'언제, 얼마에 팔 계획인가요?',s:'대략이어도 괜찮아요. 나중에 바꿀 수 있어요',h:d=>`<label for="w-pd">계획 매도일</label><input id="w-pd" type="date" name="planSellDate" value="${d.planSellDate||''}"><label for="w-pp">계획 매도가</label><input id="w-pp" class="money" inputmode="numeric" name="planSellPrice" value="${d.planSellPrice?(+d.planSellPrice).toLocaleString():''}">`,r:f=>({planSellDate:f.planSellDate,planSellPrice:num(f.planSellPrice)})},
@@ -528,6 +562,7 @@ function wzHint(){const h=$('#w-hint');if(!h||!S.wiz)return;const d={...S.wiz.d}
     h.innerHTML=x&&x.min&&p?(p>x.min?`최저가(${x.min.toLocaleString()}원)보다 <b>${(p-x.min).toLocaleString()}원 비싸요</b>`:p<x.min?`지금까지 중 <b>가장 싸요</b>`:'최저가와 같아요'):'';return}
   if(S.wiz.type==='w'&&k==='wname'){const n=$('#w-wn')?.value.trim(),x=n&&works().find(w=>w.n===n);h.innerHTML=x?`지난번 ${esc(x.a[0].date)} · ${won(x.a[0].amount)} · ${(x.a[0].workers||[]).map(w=>esc(w.name)).join(', ')}`:n?'처음 기록하는 작업이에요':'';return}
   if(S.wiz.type!=='p'){h.textContent='';return}
+  if(k==='o85'){const a=num($('#w-ar')?.value);h.innerHTML=a?`약 <b>${pyeong(a)}평</b> · ${a>85?'<b style="color:var(--amber)">85㎡ 초과</b> — 농특세·부가세 대상':'85㎡ 이하 — 국민주택규모'}`:'';return}
   if(k==='buy'){const v=num($('#w-bp')?.value);if(!v){h.textContent='';return}const a=acqTax(wzProj({...d,buyPrice:v}));h.innerHTML=`예상 취득세 <b>${full(a.total)}</b> (${a.tot.toFixed(2)}%${a.heavy?' · 중과':''})`}
   else if(k==='plan'){const pd=$('#w-pd')?.value,pp=num($('#w-pp')?.value),b=day(d.buyDate);const bits=[];
     if(b&&pd){const m=dd(b,day(pd))/30.4375;bits.push('보유 약 '+m.toFixed(1)+'개월');const j=new Date(day(pd).getFullYear(),5,1);if(day(pd)>j&&b<=j)bits.push('6월 1일 보유 → 그해 재산세 발생')}
@@ -536,7 +571,7 @@ function wzHint(){const h=$('#w-hint');if(!h||!S.wiz)return;const d={...S.wiz.d}
 function exampleData(){const P='ex'+Date.now().toString(36),M=(d,item,store,qty,unit,price,ded)=>({pid:P,date:d,item,cat:'자재비',store,qty,unit,unitPrice:price,amount:qty*price,receipt:'카드',ded}),
   W=(d,item,workers,extras,ded,receipt='계좌이체 (원천세 신고)',memo='')=>{const lab=workers.reduce((s,w)=>s+w.rate*w.count*w.days,0),ex=extras.reduce((s,x)=>s+x.amount,0);return{kind:'work',pid:P,date:d,item,cat:'공사·인건비',workers,extras,amount:lab+ex,receipt,ded,memo}},
   C=(d,item,cat,amount,ded)=>({pid:P,date:d,item,cat,amount,ded});
-  const project={id:P,name:'예시) 운정 ○○아파트 304호',type:'아파트',status:'진행중',region:'수도권비규제',housesBuy:2,housesSell:2,over85:'이하',lowPrice:'아니오',buyDate:'2026-09-01',buyPrice:320000000,planSellDate:'2027-02-26',planSellPrice:390000000,sellDate:'',sellPrice:0,lt:0,vat:'면세',vatIncl:'별도',vatBase:0,rentType:'단기임대',deposit:10000000,monthly:900000,rentStart:'2026-10-15',rentEnd:'2027-01-31'};
+  const project={id:P,name:'예시) 운정 ○○아파트 304호',type:'아파트',status:'진행중',region:'수도권비규제',housesBuy:2,housesSell:2,over85:'이하',area:84.97,lowPrice:'아니오',buyDate:'2026-09-01',buyPrice:320000000,planSellDate:'2027-02-26',planSellPrice:390000000,sellDate:'',sellPrice:0,lt:0,vat:'면세',vatIncl:'별도',vatBase:0,rentType:'단기임대',deposit:10000000,monthly:900000,rentStart:'2026-10-15',rentEnd:'2027-01-31'};
   const costs=[C('2026-09-01','취득세','취득세·등기',3520000,'필요경비'),C('2026-09-01','법무사 수수료','법무사 수수료',450000,'필요경비'),C('2026-09-01','중개수수료','중개수수료(복비)',1280000,'필요경비'),
    W('2026-09-03','철거',[{name:'철거 반장',rate:300000,count:1,days:1},{name:'조공',rate:180000,count:2,days:1}],[{name:'폐기물 처리비',amount:450000},{name:'식대',amount:45000}],'필요경비'),
    M('2026-09-05','벽 타일','동네타일',12,'박스',28000,'필요경비'),M('2026-09-05','바닥 타일','동네타일',6,'박스',32000,'필요경비'),M('2026-09-05','타일 본드','동네타일',8,'포',9500,'필요경비'),
@@ -568,7 +603,9 @@ function pForm(p={}){S.form={k:'p',id:p.id||null};const m=v=>v?(+v).toLocaleStri
   <div class="two">${f('p-sd','실제 매도일','sellDate',p.sellDate||'','date')}${f('p-sp','실제 매도가','sellPrice',m(p.sellPrice))}</div>
   <label for="p-rg">지역</label><select id="p-rg" name="region">${Object.entries(REG).map(([v,l])=>`<option value="${v}" ${v===(p.region||'비수도권')?'selected':''}>${l}</option>`).join('')}</select>
   <div class="two"><div><label for="p-hb">취득 때 주택 수 (주택만)</label><input id="p-hb" name="housesBuy" inputmode="numeric" value="${p.housesBuy||1}"></div><div><label for="p-hs">매도 때 주택 수 (주택만)</label><input id="p-hs" name="housesSell" inputmode="numeric" value="${p.housesSell||1}"></div></div>
-  <div class="two"><div><label for="p-o8">전용면적</label><select id="p-o8" name="over85">${[['이하','85㎡ 이하'],['초과','85㎡ 초과']].map(([v,l])=>`<option value="${v}" ${v===(p.over85||'이하')?'selected':''}>${l}</option>`).join('')}</select></div><div><label for="p-lp">공시가 1억 이하</label><select id="p-lp" name="lowPrice">${['아니오','예'].map(v=>`<option ${v===(p.lowPrice||'아니오')?'selected':''}>${v}</option>`).join('')}</select></div></div>
+  <div class="two"><div><label for="p-ar">전용면적 (㎡)</label><input id="p-ar" name="area" inputmode="decimal" value="${p.area||''}" placeholder="예: 84.97"></div><div><label for="p-o8">85㎡ 기준</label><select id="p-o8" name="over85">${[['이하','85㎡ 이하'],['초과','85㎡ 초과']].map(([v,l])=>`<option value="${v}" ${v===(p.over85||'이하')?'selected':''}>${l}</option>`).join('')}</select></div></div>
+  <div id="p-ar-h" class="sub" style="margin:6px 2px 0;min-height:1em">${+p.area?'약 '+pyeong(+p.area)+'평':''}</div>
+  <div class="two"><div><label for="p-lp">공시가 1억 이하</label><select id="p-lp" name="lowPrice">${['아니오','예'].map(v=>`<option ${v===(p.lowPrice||'아니오')?'selected':''}>${v}</option>`).join('')}</select></div></div>
   <div class="two">${f('p-lt','장기보유특별공제','lt',m(p.lt))}<div></div></div>
   <div class="two"><div><label for="p-v">부가세</label><select id="p-v" name="vat">${['면세','과세'].map(s=>`<option ${s===(p.vat||'면세')?'selected':''}>${s}</option>`).join('')}</select></div>${f('p-vb','건물분 공급가액','vatBase',m(p.vatBase))}</div>
   <label for="p-vi">부가세를 매도가에</label><select id="p-vi" name="vatIncl">${[['별도','별도로 받음 (매도가 + 부가세)'],['포함','포함해서 받음']].map(([v,l])=>`<option value="${v}" ${v===(p.vatIncl||'별도')?'selected':''}>${l}</option>`).join('')}</select>
@@ -587,7 +624,7 @@ function cForm(pid,date,pre={}){S.form={k:'c',id:pre.id||null};openSheet(`<h2>${
   <p class="note" style="margin:12px 2px 0">필요경비: 팔 때 예정신고에서 빠지는 비용(취득세·법무사·복비·자재·공사) · 사업경비: 연말 종합소득세에서만 빠지는 비용(이자·기장료)</p>
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`)}
 
-document.addEventListener('input',e=>{const t=e.target;if(t.dataset&&t.dataset.ac&&document.activeElement===t)acUpdate(t);if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():'';if(t===chipFor)krShow(t)}
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='p-ar'){const a=num(t.value),o=$('#p-o8'),hh=$('#p-ar-h');if(a&&o)o.value=a>85?'초과':'이하';if(hh)hh.textContent=a?'약 '+pyeong(a)+'평 · '+(a>85?'85㎡ 초과':'85㎡ 이하'):''}if(t.dataset&&t.dataset.ac&&document.activeElement===t)acUpdate(t);if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():'';if(t===chipFor)krShow(t)}
   if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();if(t.id==='k-n')wkHint();if(t.closest&&t.closest('#wk,#wz')&&(t.closest('.wrow,.xrow'))){if(t.classList.contains('w-n')){const r=t.closest('.wrow').querySelector('.w-r');if(!r.value){const last=S.costs.filter(c=>c.workers).sort((a,b)=>String(b.date).localeCompare(String(a.date))).flatMap(c=>c.workers).find(w=>w.name===t.value.trim()&&+w.rate);if(last)r.value=(+last.rate).toLocaleString()}}wkTotal()}
   if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
   if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
@@ -599,7 +636,7 @@ document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==
     const extras=[...f.querySelectorAll('.xrow')].map(r=>({name:r.querySelector('.x-n').value.trim(),amount:num(r.querySelector('.x-a').value)})).filter(x=>x.amount);
     const d={kind:'work',pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'공사·인건비',workers,extras,amount:wkTotal(),receipt:fd.receipt,ded:fd.receipt==='현금·증빙 없음'?'불공제':fd.ded,memo:fd.memo.trim()};
     if(!d.amount){toast('일당이나 기타 비용을 넣어 주세요');return}S.lastPid=fd.pid;if(await put('costs',S.form&&S.form.id||null,d)){closeSheet();toast(S.form&&S.form.id?'수정했어요':'작업을 기록했어요')}return}const fd=Object.fromEntries(new FormData(e.target));if(!S.form)return;
-  if(S.form.k==='p'){const d={name:fd.name.trim(),status:fd.status,buyDate:fd.buyDate,buyPrice:num(fd.buyPrice),planSellDate:fd.planSellDate,planSellPrice:num(fd.planSellPrice),sellDate:fd.sellDate,sellPrice:num(fd.sellPrice),lt:num(fd.lt),region:fd.region,housesBuy:Math.max(1,num(fd.housesBuy)),housesSell:Math.max(1,num(fd.housesSell)),over85:fd.over85,lowPrice:fd.lowPrice,type:fd.type,rentType:fd.rentType,deposit:num(fd.deposit),monthly:num(fd.monthly),rentStart:fd.rentStart,rentEnd:fd.rentEnd,vat:fd.vat,vatBase:num(fd.vatBase),vatIncl:fd.vatIncl};
+  if(S.form.k==='p'){const d={name:fd.name.trim(),status:fd.status,buyDate:fd.buyDate,buyPrice:num(fd.buyPrice),planSellDate:fd.planSellDate,planSellPrice:num(fd.planSellPrice),sellDate:fd.sellDate,sellPrice:num(fd.sellPrice),lt:num(fd.lt),region:fd.region,housesBuy:Math.max(1,num(fd.housesBuy)),housesSell:Math.max(1,num(fd.housesSell)),area:num(fd.area),over85:num(fd.area)?(num(fd.area)>85?'초과':'이하'):fd.over85,lowPrice:fd.lowPrice,type:fd.type,rentType:fd.rentType,deposit:num(fd.deposit),monthly:num(fd.monthly),rentStart:fd.rentStart,rentEnd:fd.rentEnd,vat:fd.vat,vatBase:num(fd.vatBase),vatIncl:fd.vatIncl};
     if(d.sellDate&&d.sellPrice&&d.status==='진행중')d.status='완료';if(await put('projects',S.form.id,d)){closeSheet();toast('저장했어요')}}
   else if(S.form.k==='m'){const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'자재비',store:fd.store.trim(),qty:num(fd.qty),unit:fd.unit.trim(),unitPrice:num(fd.unitPrice),amount:num(fd.amount),receipt:fd.receipt,ded:fd.ded};
     if(!d.amount){toast('금액이나 수량·단가를 넣어 주세요');return}S.lastPid=fd.pid;const eid=S.form.id;if(await put('costs',eid||null,d)){if(eid){closeSheet();toast('수정했어요')}else if(e.submitter&&'more' in e.submitter.dataset){mForm(fd.pid,{pid:fd.pid,date:fd.date,store:d.store,receipt:fd.receipt});toast(d.item+' 저장 · 다음 자재를 넣으세요')}else{closeSheet();toast('자재를 기록했어요')}}}
@@ -629,6 +666,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
   else if(ds.day){S.cal.sel=ds.day;render()}
   else if(ds.cm){const c=S.cal;c.m+=+ds.cm;if(c.m<0){c.m=11;c.y--}if(c.m>11){c.m=0;c.y++}c.sel=`${c.y}-${String(c.m+1).padStart(2,'0')}-01`;render()}
   else if(ds.addmat!==undefined){const pid=ds.addmat||(S.view==='detail'?S.pid:null);wzStartM({...(pid!=null?{pid}:{}),...(ds.date?{date:ds.date}:{})},pid!=null?'date':'pid')}
+  else if(ds.area){const i=$('#w-ar');if(i){i.value=ds.area;wzHint()}}
   else if(ds.unit){const u=$('#w-u');if(u)u.value=ds.unit;$('#w-up')?.focus()}
   else if(ds.again){const c=S.costs.find(x=>x.id===ds.again);if(c)wzStartM({pid:c.pid,item:c.item,unit:c.unit,unitPrice:+c.unitPrice||0,store:c.store,receipt:c.receipt,ded:c.ded},'date')}
   else if('close' in ds)closeSheet();
