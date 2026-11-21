@@ -347,7 +347,7 @@ function manage(){const ps=sorted(),common=S.costs.filter(c=>!c.pid).sort((a,b)=
   <div class="card"><div class="sub">데이터는 이 폰에만 저장돼요. 폰을 바꾸거나 앱을 지우기 전에 꼭 백업하세요.${(()=>{const b=lastBackup();return b?' · 마지막 백업 '+b.slice(0,10):' · <b style="color:var(--rose)">아직 백업 안 함</b>'})()}</div>
   <div class="two" style="margin-top:12px"><button class="btn pri" data-export>백업 저장</button><button class="btn" data-import>백업 불러오기</button></div>
   <button class="btn" data-xlsx style="width:100%;margin-top:10px">엑셀로 내보내기 (.xlsx)</button><div class="sub" style="margin-top:6px;font-size:12px">프로젝트 · 비용 내역 · 작업 인원 · 자재 단가 · 연간 정산 시트로 나눠 저장돼요. 엑셀 파일은 보기용이고, 복구는 백업 파일로 해요.</div>
-  <input type="file" id="imp" accept="application/json,.json" hidden></div>
+  <input type="file" id="imp" accept=".json,application/json,text/plain,application/octet-stream" hidden></div>
   <div class="sec">설정</div>
   <div class="card"><button class="lib row" data-vib style="justify-content:space-between;min-height:44px"><span><b style="font-size:15px">진동 피드백</b><div class="sub">버튼·저장·삭제할 때 짧게 진동 (안드로이드)</div></span><span class="tg${vibOn()?' on':''}"><i></i></span></button></div>`}
 
@@ -576,6 +576,13 @@ function exportXlsx(){const ps=sorted(),Y=S.year;
 function exportData(){const blob=new Blob([JSON.stringify({app:'maemae',version:1,exportedAt:new Date().toISOString(),projects:S.projects,costs:S.costs,set:S.set},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Fixfolio-백업-'+iso(new Date())+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
   try{localStorage.setItem(KEY+'-lastbackup',new Date().toISOString())}catch(_){}render();toast('백업 파일을 저장했어요')}
+async function readBackup(f){if(!f.size)return{err:'파일이 비어 있어요 (0 bytes). 다운로드가 끝나기 전에 저장됐을 수 있어요.'};
+  const buf=new Uint8Array(await f.arrayBuffer());if(buf[0]===0x50&&buf[1]===0x4B)return{err:'엑셀이나 압축(zip) 파일이에요. 백업은 .json 파일이에요.'};
+  let t='';for(const enc of['utf-8','utf-16le','euc-kr']){try{t=new TextDecoder(enc,{fatal:enc==='utf-8'}).decode(buf);break}catch(_){}}
+  t=t.replace(/^﻿/,'').trim();const i=t.indexOf('{'),j=t.lastIndexOf('}');if(i<0||j<i)return{err:'백업 내용(JSON)을 찾을 수 없어요.'};
+  let d;try{d=JSON.parse(t.slice(i,j+1))}catch(e){return{err:'파일 내용이 깨져 있어요 ('+esc(String(e.message||e).slice(0,80))+').'}}
+  if(Array.isArray(d))return{err:'Fixfolio 백업 형식이 아니에요.'};if(!Array.isArray(d.projects)){if(d.data&&Array.isArray(d.data.projects))d=d.data;else return{err:'Fixfolio 백업 형식이 아니에요 (프로젝트 목록이 없어요).'}}
+  return{d}}
 function lastBackup(){try{return localStorage.getItem(KEY+'-lastbackup')}catch(_){return null}}
 
 function costSheet(id){const p=S.projects.find(x=>x.id===id);if(!p)return;const c=calc(p),row=(k,v,s)=>`<div class="kv"><span>${k}</span><b>${v}</b></div>${s||''}`;
@@ -738,7 +745,7 @@ document.addEventListener('input',e=>{const t=e.target;
   if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();if(t.id==='k-n')wkHint();if(t.closest&&t.closest('#wk,#wz')&&(t.closest('.wrow,.xrow'))){if(t.classList.contains('w-n')){const r=t.closest('.wrow').querySelector('.w-r');if(!r.value){const last=S.costs.filter(c=>c.workers).sort((a,b)=>String(b.date).localeCompare(String(a.date))).flatMap(c=>c.workers).find(w=>w.name===t.value.trim()&&+w.rate);if(last)r.value=(+last.rate).toLocaleString()}}wkTotal()}
   if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
   if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
-document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.sim!==undefined&&e.target.tagName==='SELECT'){simRead();S.simScan=null;simUpdate(true)}if(e.target.id==='p-ty'){const v=$('#p-v');if(v&&(e.target.value==='상가'||e.target.value==='오피스텔'))v.value='과세'}if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';f.text().then(t=>{let d;try{d=JSON.parse(t)}catch(_){toast('백업 파일을 읽지 못했어요');return}
+document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.sim!==undefined&&e.target.tagName==='SELECT'){simRead();S.simScan=null;simUpdate(true)}if(e.target.id==='p-ty'){const v=$('#p-v');if(v&&(e.target.value==='상가'||e.target.value==='오피스텔'))v.value='과세'}if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';readBackup(f).then(r=>{if(r.err){openSheet(`<h2>백업을 읽지 못했어요</h2><p class="sub">${r.err}</p><div class="kv"><span>고른 파일</span><b>${esc(f.name)}</b></div><div class="kv"><span>크기</span><b>${f.size.toLocaleString()} bytes</b></div><p class="note">파일 이름이 <b>Fixfolio-백업-날짜.json</b> 또는 <b>매매프로젝트-백업-날짜.json</b>인지 확인하세요. 엑셀(.xlsx) 파일로는 복구할 수 없어요. 그래도 안 되면 이 파일을 Claude 대화창에 첨부해 주세요.</p><button class="btn pri" data-import style="width:100%;margin-top:14px">다른 파일 고르기</button><button class="btn" data-close style="width:100%;margin-top:10px">닫기</button>`);return}const d=r.d;
   if(!d||!Array.isArray(d.projects)){toast('Fixfolio 백업 파일이 아니에요');return}S.pending=d;
   openSheet(`<h2>백업 불러오기</h2><p class="sub">프로젝트 ${d.projects.length}건, 비용 ${(d.costs||[]).length}건이 들어 있어요${d.exportedAt?' ('+esc(String(d.exportedAt).slice(0,10))+' 백업)':''}. 지금 앱에 있는 데이터는 이 백업으로 바뀌어요.</p><div class="acts"><button class="btn pri" data-impok>불러오기</button><button class="btn" data-close>취소</button></div>`)})}if(e.target.id==='m-r'&&e.target.value==='없음'){const d=$('#m-e');if(d)d.value='불공제'}if(e.target.id==='c-c'){const d=$('#c-e');if(d&&CAT_DED[e.target.value])d.value=CAT_DED[e.target.value]}if(S.view==='tax'&&(e.target.dataset.bl||e.target.dataset.br))render()});
 document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==='wz'){wzNext(e.target,e.submitter);return}
