@@ -71,6 +71,12 @@ h2{font-size:20px;margin:0 0 6px}
 .three{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(0,1.3fr);gap:10px}
 details.mat summary{list-style:none;cursor:pointer}details.mat summary::-webkit-details-marker{display:none}
 .mstat{display:flex;justify-content:space-between;gap:8px;background:var(--soft);border-radius:14px;padding:10px 14px;margin-top:14px;font-size:13px;color:var(--mute)}.mstat b{color:var(--ink);font-size:14px}
+.opt{display:block;width:100%;text-align:left;padding:15px 18px;border-radius:16px;border:1px solid var(--line);background:var(--soft);font:inherit;font-size:16px;color:var(--ink);margin-top:10px;min-height:56px;cursor:pointer}
+.opt.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--card));font-weight:600}
+.wz-top{display:flex;justify-content:space-between;align-items:center}.wz-bar{height:6px;border-radius:99px;background:var(--soft);margin:4px 0 18px;overflow:hidden}.wz-bar i{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .3s}
+.whint{margin-top:12px;font-size:14px;color:var(--mute);min-height:1em;line-height:1.6}
+.stat.tap{border:0;text-align:left;font:inherit;color:inherit;cursor:pointer}.stat.tap span{color:var(--blue)}
+details.bd summary{list-style:none;cursor:pointer}details.bd summary::-webkit-details-marker{display:none}.kv.sub2{font-size:14px;padding:7px 0 7px 12px}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 .note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
@@ -189,7 +195,7 @@ function detail(){const p=S.projects.find(x=>x.id===S.pid);if(!p){S.view='home';
   ${(()=>{const j=juneInfo(p);if(!j)return'';if(j.risk)return `<div class="alert"><b>${j.year}년 재산세가 나올 예정이에요</b>${j.plan?'계획 매도일이 6월 1일 이후예요. ':'매도 계획일이 없어요. '}${j.dl}까지 잔금을 받으면 피할 수 있어요 · D-${j.left}</div>`;
     return `<div class="alert ok"><b>${j.year}년 재산세 없음</b>계획대로 6월 1일 전에 팔면 안 나와요 · 잔금 마감 ${j.dl} (D-${j.left})</div>`})()}
   <div class="sec">핵심 숫자</div>
-  <div class="stats">${st('매도가'+(c.sold?'':' (계획)'),full(c.gross))}${st('총 투입비',full(c.cost))}${st('세전 이익',full(c.pre))}${st('과세 매매차익',full(c.taxable))}${st('예정신고 세액 (기본세율)',full(c.preTax))}${st('최종 소득세'+(c.cmp?' (비교과세)':''),full(c.tax))}${st(p.vat==='과세'?'부가세 · '+(c.vatIn?'매도가에 포함':'별도로 받음'):'부가세',p.vat==='과세'?full(c.vatAmt):'면세')}${st('보유세 (재산세·종부세)',full(c.hold))}${c.rent.inc?st('임대수입 (월세)',full(c.rent.inc)):''}${st('세후 이익',full(c.after),1)}</div>
+  <div class="stats">${st('매도가'+(c.sold?'':' (계획)'),full(c.gross))}<button class="stat tap" data-costbd="${esc(p.id)}"><span>총 투입비 · 항목 보기 ›</span><b>${full(c.cost)}</b></button>${st('세전 이익',full(c.pre))}${st('과세 매매차익',full(c.taxable))}${st('예정신고 세액 (기본세율)',full(c.preTax))}${st('최종 소득세'+(c.cmp?' (비교과세)':''),full(c.tax))}${st(p.vat==='과세'?'부가세 · '+(c.vatIn?'매도가에 포함':'별도로 받음'):'부가세',p.vat==='과세'?full(c.vatAmt):'면세')}${st('보유세 (재산세·종부세)',full(c.hold))}${c.rent.inc?st('임대수입 (월세)',full(c.rent.inc)):''}${st('세후 이익',full(c.after),1)}</div>
   <div class="sec">세금 판단</div>
   <div class="card">${[['유형',esc(p.type||'아파트')],['지역',REG[p.region||'비수도권']],...(isHouse(p)?[['주택 수 (취득 / 매도 때)',(+p.housesBuy||1)+'채 / '+(+p.housesSell||1)+'채']]:[]),['취득세율 (교육세·농특세 포함)',c.acq.total?c.acq.tot.toFixed(2)+'%'+(c.acq.heavy?' · 중과':''):'–'],['예상 취득세',c.hasAcq?'기록된 금액 사용':full(c.acq.total)+' (자동 반영 중)'],['보유 기간',c.yrs?c.yrs.toFixed(1)+'년'+(p.sellDate?'':' (계획 기준)'):'–'],['비교과세',c.cmp?'대상 · 규제지역 다주택':'대상 아님'],['적용 방식',c.method],['개인 명의였다면 (양도세)',full(pv.t)+(pv.short?' · 단기 '+pv.short*100+'%':'')]].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}
   <div class="sub" style="margin-top:6px">${pv.t>c.tax?'매매사업자로 하면 '+won(pv.t-c.tax)+' 덜 내요':pv.t<c.tax?'이 건은 개인 명의가 '+won(c.tax-pv.t)+' 덜 내요':'개인 명의와 세금이 같아요'} (보유 ${c.yrs?c.yrs.toFixed(1):0}년 기준)</div>
@@ -307,6 +313,52 @@ function exportData(){const blob=new Blob([JSON.stringify({app:'maemae',version:
   try{localStorage.setItem(KEY+'-lastbackup',new Date().toISOString())}catch(_){}render();toast('백업 파일을 저장했어요')}
 function lastBackup(){try{return localStorage.getItem(KEY+'-lastbackup')}catch(_){return null}}
 
+function costSheet(id){const p=S.projects.find(x=>x.id===id);if(!p)return;const c=calc(p),row=(k,v,s)=>`<div class="kv"><span>${k}</span><b>${v}</b></div>${s||''}`;
+  const cats=[...new Set(c.cs.map(x=>x.cat))].map(k=>{const a=c.cs.filter(x=>x.cat===k);return{k,a,v:a.reduce((s,x)=>s+(+x.amount||0),0)}}).sort((a,b)=>b.v-a.v);
+  openSheet(`<h2>총 투입비 ${full(c.cost)}</h2><p class="sub">매입가와 지금까지 기록한 비용을 합친 금액이에요</p>
+  <div style="margin-top:14px">${row('매입가',full(c.buy))}${c.acqAuto?row('취득세 (자동 예상)',full(c.acqAuto),'<div class="sub" style="margin:-4px 0 8px">비용에 취득세를 기록하면 실제 금액으로 바뀌어요</div>'):''}
+  ${cats.map(g=>`<details class="bd"><summary class="kv"><span>${esc(g.k)} · ${g.a.length}건 ›</span><b>${full(g.v)}</b></summary>${g.a.map(x=>`<div class="kv sub2"><span>${esc(x.date||'')} ${esc(x.item||'')}${x.qty?` (${(+x.qty).toLocaleString()}${esc(x.unit||'')})`:''}</span><b>${full(x.amount)}</b></div>`).join('')}</details>`).join('')}</div>
+  <div class="mstat" style="margin-top:14px"><span>필요경비 <b>${won(c.need)}</b></span><span>사업경비 <b>${won(c.biz)}</b></span><span>불공제 <b>${won(c.non)}</b></span></div>
+  <div class="acts"><button class="btn pri" type="button" data-addcost="${esc(p.id)}">비용 추가</button><button class="btn" type="button" data-close>닫기</button></div>`)}
+const yesno=[['아니오','아니요'],['예','네, 1억 이하']];
+const WZ=[
+ {k:'name',t:'프로젝트 이름을 정해요',s:'주소나 별명처럼 알아보기 쉬운 이름이면 돼요',h:d=>`<input id="w-in" name="name" value="${esc(d.name||'')}" placeholder="예: ○○동 빌라 101호" autocomplete="off">`,r:f=>({name:f.name.trim()}),v:d=>d.name?'':'이름을 넣어 주세요'},
+ {k:'type',t:'어떤 부동산인가요?',s:'유형에 따라 취득세·부가세 계산이 달라져요',ch:()=>TYPES.map(x=>[x,x]),f:'type'},
+ {k:'region',t:'어느 지역인가요?',s:'조정대상지역이면 다주택 중과와 비교과세가 붙을 수 있어요',ch:()=>Object.entries(REG),f:'region'},
+ {k:'hb',show:isHouse,t:'이 집을 사면 집이 몇 채가 되나요?',s:'이 집 포함, 아파트·빌라·주거용 오피스텔을 세요',ch:()=>[['1','1채'],['2','2채'],['3','3채'],['4','4채 이상']],f:'housesBuy',num:1},
+ {k:'hs',show:isHouse,t:'팔 때는 몇 채일 것 같나요?',s:'규제지역에서 2채 이상이면 세금이 크게 늘 수 있어요',ch:()=>[['1','1채'],['2','2채'],['3','3채'],['4','4채 이상']],f:'housesSell',num:1},
+ {k:'o85',show:isHouse,t:'전용면적은요?',s:'85㎡(약 34평형)를 넘으면 농특세와 부가세가 붙어요',ch:()=>[['이하','85㎡ 이하'],['초과','85㎡ 초과']],f:'over85'},
+ {k:'lp',show:isHouse,t:'공시가격이 1억 원 이하인가요?',s:'1억 이하 주택은 주택 수와 상관없이 취득세 기본세율이에요',ch:()=>yesno,f:'lowPrice'},
+ {k:'buy',t:'언제, 얼마에 사나요?',s:'아직 안 샀으면 예정 날짜와 금액을 넣어요',h:d=>`<label for="w-bd">매입일</label><input id="w-bd" type="date" name="buyDate" value="${d.buyDate||''}"><label for="w-bp">매입가</label><input id="w-bp" class="money" inputmode="numeric" name="buyPrice" value="${d.buyPrice?(+d.buyPrice).toLocaleString():''}" placeholder="예: 200,000,000">`,r:f=>({buyDate:f.buyDate,buyPrice:num(f.buyPrice)}),v:d=>d.buyPrice?'':'매입가를 넣어 주세요'},
+ {k:'plan',t:'언제, 얼마에 팔 계획인가요?',s:'대략이어도 괜찮아요. 나중에 바꿀 수 있어요',h:d=>`<label for="w-pd">계획 매도일</label><input id="w-pd" type="date" name="planSellDate" value="${d.planSellDate||''}"><label for="w-pp">계획 매도가</label><input id="w-pp" class="money" inputmode="numeric" name="planSellPrice" value="${d.planSellPrice?(+d.planSellPrice).toLocaleString():''}">`,r:f=>({planSellDate:f.planSellDate,planSellPrice:num(f.planSellPrice)})},
+ {k:'vat',t:'팔 때 부가세가 붙나요?',s:d=>!isHouse(d)||d.over85==='초과'?'이 경우는 보통 건물분이 과세예요':'85㎡ 이하 주택은 보통 면세예요',ch:()=>[['면세','면세'],['과세','과세 (건물분 10%)']],f:'vat'},
+ {k:'vatb',show:d=>d.vat==='과세',t:'건물분 금액과 받는 방식',s:'매도가 중 건물에 해당하는 공급가액이에요',h:d=>`<label for="w-vb">건물분 공급가액</label><input id="w-vb" class="money" inputmode="numeric" name="vatBase" value="${d.vatBase?(+d.vatBase).toLocaleString():''}"><label for="w-vi">부가세를</label><select id="w-vi" name="vatIncl"><option value="별도" ${d.vatIncl!=='포함'?'selected':''}>매도가와 별도로 받음</option><option value="포함" ${d.vatIncl==='포함'?'selected':''}>매도가에 포함해서 받음</option></select>`,r:f=>({vatBase:num(f.vatBase),vatIncl:f.vatIncl})},
+ {k:'rent',t:'팔기 전에 임대를 놓나요?',s:'월세 수입도 수익률에 같이 계산해요',ch:()=>[['없음','안 놓아요'],['단기임대','단기임대'],['장기임대','장기임대']],f:'rentType'},
+ {k:'rentd',show:d=>d.rentType&&d.rentType!=='없음',t:'임대 조건을 알려주세요',s:'종료일을 비워 두면 팔 때까지로 계산해요',h:d=>`<div class="two"><div><label for="w-dp">보증금</label><input id="w-dp" class="money" inputmode="numeric" name="deposit" value="${d.deposit?(+d.deposit).toLocaleString():''}"></div><div><label for="w-mr">월세</label><input id="w-mr" class="money" inputmode="numeric" name="monthly" value="${d.monthly?(+d.monthly).toLocaleString():''}"></div></div><div class="two"><div><label for="w-rs">임대 시작</label><input id="w-rs" type="date" name="rentStart" value="${d.rentStart||''}"></div><div><label for="w-re">임대 종료</label><input id="w-re" type="date" name="rentEnd" value="${d.rentEnd||''}"></div></div>`,r:f=>({deposit:num(f.deposit),monthly:num(f.monthly),rentStart:f.rentStart,rentEnd:f.rentEnd})},
+ {k:'done',t:'이대로 만들까요?',s:'만든 뒤에도 프로젝트 수정에서 바꿀 수 있어요',h:d=>{const p=wzProj(d),c=calc(p),kv=(k,v)=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`;
+   return kv('이름',esc(d.name))+kv('유형 · 지역',esc(d.type||'아파트')+' · '+REG[d.region||'비수도권'])+(isHouse(d)?kv('주택 수 (살 때 / 팔 때)',(d.housesBuy||1)+'채 / '+(d.housesSell||1)+'채'):'')+kv('매입',(d.buyDate||'날짜 미정')+' · '+won(d.buyPrice))+kv('매도 계획',(d.planSellDate||'날짜 미정')+' · '+(d.planSellPrice?won(d.planSellPrice):'–'))+kv('부가세',d.vat||'면세')+kv('임대',d.rentType&&d.rentType!=='없음'?esc(d.rentType)+' · 월 '+won(d.monthly):'없음')
+   +`<div class="stats" style="margin-top:14px"><div class="stat"><span>예상 취득세</span><b>${won(c.acq.total)}</b></div><div class="stat"><span>예상 세금</span><b>${won(c.tax)}</b></div><div class="stat hi"><span>세후 이익 · 수익률</span><b>${won(c.after)} · ${pct(c.roi)}</b></div></div>`}}
+];
+const wzProj=d=>({id:'__wz',status:'진행중',type:'아파트',region:'비수도권',housesBuy:1,housesSell:1,over85:'이하',lowPrice:'아니오',vat:'면세',vatIncl:'별도',rentType:'없음',sellDate:'',sellPrice:0,lt:0,...d});
+const wzVis=()=>WZ.filter(s=>!s.show||s.show(wzProj(S.wiz.d)));
+function wzStart(){S.wiz={d:{},k:'name'};S.form={k:'w'};wzRender()}
+function wzRender(){const d=S.wiz.d,vis=wzVis(),i=Math.max(0,vis.findIndex(s=>s.k===S.wiz.k)),st=vis[i],cur=st.f?wzProj(d)[st.f]:null,last=st.k==='done';S.form={k:'w'};
+  openSheet(`<div class="wz-top"><button type="button" class="back" data-wback>${icon('back',20)} ${i?'이전':'닫기'}</button><span class="sub">${i+1} / ${vis.length}</span></div>
+  <div class="wz-bar"><i style="width:${(i+1)/vis.length*100}%"></i></div>
+  <h2>${st.t}</h2><p class="sub" style="margin:0 0 6px">${typeof st.s==='function'?st.s(wzProj(d)):st.s||''}</p>
+  <form id="wz">${st.ch?st.ch().map(([v,l])=>`<button type="button" class="opt${String(cur)===String(v)?' on':''}" data-wpick="${esc(v)}">${esc(l)}</button>`).join(''):st.h(d)}
+  <div id="w-hint" class="whint"></div>
+  ${st.ch?'':`<button class="btn pri" type="submit" style="width:100%;margin-top:18px">${last?'프로젝트 만들기':'다음'}</button>`}</form>`);wzHint()}
+function wzGo(n){const vis=wzVis(),i=vis.findIndex(s=>s.k===S.wiz.k),j=i+n;if(j<0){closeSheet();return}S.wiz.k=vis[Math.min(j,vis.length-1)].k;wzRender()}
+async function wzNext(form){const vis=wzVis(),st=vis.find(s=>s.k===S.wiz.k);if(st.r)Object.assign(S.wiz.d,st.r(Object.fromEntries(new FormData(form))));
+  const err=st.v&&st.v(wzProj(S.wiz.d));if(err){toast(err);return}
+  if(st.k==='done'){const {id,...data}=wzProj(S.wiz.d);if(await put('projects',null,data)){closeSheet();S.wiz=null;S.view='home';render();toast('프로젝트를 만들었어요')}return}wzGo(1)}
+function wzHint(){const h=$('#w-hint');if(!h||!S.wiz)return;const d={...S.wiz.d},k=S.wiz.k;
+  if(k==='buy'){const v=num($('#w-bp')?.value);if(!v){h.textContent='';return}const a=acqTax(wzProj({...d,buyPrice:v}));h.innerHTML=`예상 취득세 <b>${full(a.total)}</b> (${a.tot.toFixed(2)}%${a.heavy?' · 중과':''})`}
+  else if(k==='plan'){const pd=$('#w-pd')?.value,pp=num($('#w-pp')?.value),b=day(d.buyDate);const bits=[];
+    if(b&&pd){const m=dd(b,day(pd))/30.4375;bits.push('보유 약 '+m.toFixed(1)+'개월');const j=new Date(day(pd).getFullYear(),5,1);if(day(pd)>j&&b<=j)bits.push('6월 1일 보유 → 그해 재산세 발생')}
+    if(pp){const c=calc(wzProj({...d,planSellDate:pd,planSellPrice:pp}));bits.push(`세후 이익 약 <b>${won(c.after)}</b> (${pct(c.roi)})`)}h.innerHTML=bits.join(' · ')}
+  else h.textContent=''}
 function pForm(p={}){S.form={k:'p',id:p.id||null};const m=v=>v?(+v).toLocaleString():'';
   const f=(id,l,n,v,t='text')=>`<div><label for="${id}">${l}</label><input id="${id}" name="${n}" ${t==='date'?'type="date"':'class="money" inputmode="numeric"'} value="${esc(v)}"></div>`;
   openSheet(`<h2>${p.id?'프로젝트 수정':'새 프로젝트'}</h2><form id="f">
@@ -337,14 +389,14 @@ function cForm(pid){S.form={k:'c'};openSheet(`<h2>비용 기록</h2><form id="f"
   <p class="note" style="margin:12px 2px 0">필요경비: 팔 때 예정신고에서 빠지는 비용(취득세·법무사·복비·자재·공사) · 사업경비: 연말 종합소득세에서만 빠지는 비용(이자·기장료)</p>
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`)}
 
-document.addEventListener('input',e=>{const t=e.target;if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():''}
+document.addEventListener('input',e=>{const t=e.target;if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():''}
   if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();
   if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
   if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
 document.addEventListener('change',e=>{if(e.target.id==='p-ty'){const v=$('#p-v');if(v&&(e.target.value==='상가'||e.target.value==='오피스텔'))v.value='과세'}if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';f.text().then(t=>{let d;try{d=JSON.parse(t)}catch(_){toast('백업 파일을 읽지 못했어요');return}
   if(!d||!Array.isArray(d.projects)){toast('매매 프로젝트 백업 파일이 아니에요');return}S.pending=d;
   openSheet(`<h2>백업 불러오기</h2><p class="sub">프로젝트 ${d.projects.length}건, 비용 ${(d.costs||[]).length}건이 들어 있어요${d.exportedAt?' ('+esc(String(d.exportedAt).slice(0,10))+' 백업)':''}. 지금 앱에 있는 데이터는 이 백업으로 바뀌어요.</p><div class="acts"><button class="btn pri" data-impok>불러오기</button><button class="btn" data-close>취소</button></div>`)})}if(e.target.id==='m-r'&&e.target.value==='없음'){const d=$('#m-e');if(d)d.value='불공제'}if(e.target.id==='c-c'){const d=$('#c-e');if(d&&CAT_DED[e.target.value])d.value=CAT_DED[e.target.value]}if(S.view==='tax'&&(e.target.dataset.bl||e.target.dataset.br))render()});
-document.addEventListener('submit',async e=>{e.preventDefault();const fd=Object.fromEntries(new FormData(e.target));if(!S.form)return;
+document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==='wz'){wzNext(e.target);return}const fd=Object.fromEntries(new FormData(e.target));if(!S.form)return;
   if(S.form.k==='p'){const d={name:fd.name.trim(),status:fd.status,buyDate:fd.buyDate,buyPrice:num(fd.buyPrice),planSellDate:fd.planSellDate,planSellPrice:num(fd.planSellPrice),sellDate:fd.sellDate,sellPrice:num(fd.sellPrice),lt:num(fd.lt),region:fd.region,housesBuy:Math.max(1,num(fd.housesBuy)),housesSell:Math.max(1,num(fd.housesSell)),over85:fd.over85,lowPrice:fd.lowPrice,type:fd.type,rentType:fd.rentType,deposit:num(fd.deposit),monthly:num(fd.monthly),rentStart:fd.rentStart,rentEnd:fd.rentEnd,vat:fd.vat,vatBase:num(fd.vatBase),vatIncl:fd.vatIncl};
     if(d.sellDate&&d.sellPrice&&d.status==='진행중')d.status='완료';if(await put('projects',S.form.id,d)){closeSheet();toast('저장했어요')}}
   else if(S.form.k==='m'){const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'자재비',store:fd.store.trim(),qty:num(fd.qty),unit:fd.unit.trim(),unitPrice:num(fd.unitPrice),amount:num(fd.amount),receipt:fd.receipt,ded:fd.ded};
@@ -353,7 +405,10 @@ document.addEventListener('submit',async e=>{e.preventDefault();const fd=Object.
 document.addEventListener('click',async e=>{const t=e.target.closest('button,[data-open]');if(e.target.id==='sheet'){closeSheet();return}if(!t)return;const ds=t.dataset;
   if(ds.go){S.view=ds.go;S.armed=null;if(ds.go!=='tax')S.draft=null;render();scrollTo(0,0)}
   else if(ds.open){S.pid=ds.open;S.view='detail';closeSheet();render();scrollTo(0,0)}
-  else if('newp' in ds)pForm();
+  else if('newp' in ds)wzStart();
+  else if(ds.wpick!==undefined){const st=wzVis().find(s=>s.k===S.wiz.k);S.wiz.d[st.f]=st.num?+ds.wpick:ds.wpick;if(st.f==='housesBuy'&&!S.wiz.d.housesSell)S.wiz.d.housesSell=+ds.wpick;if(st.f==='type'&&!isHouse({type:ds.wpick})&&!S.wiz.d.vat)S.wiz.d.vat='과세';wzGo(1)}
+  else if('wback' in ds)wzGo(-1);
+  else if(ds.costbd)costSheet(ds.costbd);
   else if('export' in ds)exportData();
   else if('import' in ds)$('#imp').click();
   else if('impok' in ds){apply(S.pending);S.pending=null;persist();closeSheet();S.view='home';render();toast('백업을 불러왔어요')}
