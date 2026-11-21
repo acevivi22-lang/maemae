@@ -85,6 +85,7 @@ details.bd summary{list-style:none;cursor:pointer}details.bd summary::-webkit-de
 .rowhead{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 4px;font-weight:600;font-size:15px}
 .wrow{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1.2fr) 46px 46px 36px;gap:6px;margin-top:6px}.xrow{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) 36px;gap:6px;margin-top:6px}
 .wrow input,.xrow input{padding:10px 10px;min-height:44px}.x{border:0;background:var(--soft);border-radius:12px;font-size:20px;color:var(--mute);cursor:pointer;min-height:44px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}.chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:0 12px;min-height:36px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}.chip:active{background:var(--soft)}.chips .kr{font-size:13px;color:var(--blue);margin-left:4px;font-weight:600}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 .note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
@@ -224,6 +225,7 @@ const costRow=x=>`<div class="li"><div class="grow"><div class="name">${esc(x.it
 
 function manage(){const ps=sorted(),common=S.costs.filter(c=>!c.pid).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   return `<h1>프로젝트 관리</h1>
+  <button class="btn" data-example style="width:100%;margin-bottom:10px">예시 프로젝트 넣기 (자재·작업·임대 포함)</button>
   <div class="two"><button class="btn pri" data-newp>새 프로젝트</button><button class="btn" data-addcost="">비용 기록</button></div>
   <button class="btn" data-addmat="" style="width:100%;margin-top:10px">자재 구매 기록</button>
   <div class="sec">전체 프로젝트</div>
@@ -379,7 +381,7 @@ function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d)a
 function apply(d){S.projects=Array.isArray(d.projects)?d.projects:[];S.costs=Array.isArray(d.costs)?d.costs.map(norm):[];
   if(d.set&&Array.isArray(d.set.brackets))S.set={deduction:+d.set.deduction||0,local:+d.set.local||0,brackets:d.set.brackets.map(b=>Array.isArray(b)?[+b[0]||0,+b[1]||0]:[+b.l||0,+b.r||0])}}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-async function put(col,id,data){const arr=col==='projects'?S.projects:S.costs;if(id){const i=arr.findIndex(x=>x.id===id);arr[i]={...data,id}}else arr.push({...data,id:uid()});persist();render();return true}
+async function put(col,id,data){const arr=col==='projects'?S.projects:S.costs;if(id){const i=arr.findIndex(x=>x.id===id);if(i<0)arr.push({...data,id});else arr[i]={...data,id}}else arr.push({...data,id:uid()});persist();render();return true}
 async function del(col,id){const k=col==='projects'?'projects':'costs';S[k]=S[k].filter(x=>x.id!==id);persist();render()}
 function exportData(){const blob=new Blob([JSON.stringify({app:'maemae',version:1,exportedAt:new Date().toISOString(),projects:S.projects,costs:S.costs,set:S.set},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='매매프로젝트-백업-'+iso(new Date())+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
@@ -432,6 +434,30 @@ function wzHint(){const h=$('#w-hint');if(!h||!S.wiz)return;const d={...S.wiz.d}
     if(b&&pd){const m=dd(b,day(pd))/30.4375;bits.push('보유 약 '+m.toFixed(1)+'개월');const j=new Date(day(pd).getFullYear(),5,1);if(day(pd)>j&&b<=j)bits.push('6월 1일 보유 → 그해 재산세 발생')}
     if(pp){const c=calc(wzProj({...d,planSellDate:pd,planSellPrice:pp}));bits.push(`세후 이익 약 <b>${won(c.after)}</b> (${pct(c.roi)})`)}h.innerHTML=bits.join(' · ')}
   else h.textContent=''}
+function exampleData(){const P='ex'+Date.now().toString(36),M=(d,item,store,qty,unit,price,ded)=>({pid:P,date:d,item,cat:'자재비',store,qty,unit,unitPrice:price,amount:qty*price,receipt:'카드',ded}),
+  W=(d,item,workers,extras,ded,receipt='계좌이체 (원천세 신고)',memo='')=>{const lab=workers.reduce((s,w)=>s+w.rate*w.count*w.days,0),ex=extras.reduce((s,x)=>s+x.amount,0);return{kind:'work',pid:P,date:d,item,cat:'공사·인건비',workers,extras,amount:lab+ex,receipt,ded,memo}},
+  C=(d,item,cat,amount,ded)=>({pid:P,date:d,item,cat,amount,ded});
+  const project={id:P,name:'예시) 운정 ○○아파트 304호',type:'아파트',status:'진행중',region:'수도권비규제',housesBuy:2,housesSell:2,over85:'이하',lowPrice:'아니오',buyDate:'2026-09-01',buyPrice:320000000,planSellDate:'2027-02-26',planSellPrice:390000000,sellDate:'',sellPrice:0,lt:0,vat:'면세',vatIncl:'별도',vatBase:0,rentType:'단기임대',deposit:10000000,monthly:900000,rentStart:'2026-10-15',rentEnd:'2027-01-31'};
+  const costs=[C('2026-09-01','취득세','취득세·등기',3520000,'필요경비'),C('2026-09-01','법무사 수수료','법무사 수수료',450000,'필요경비'),C('2026-09-01','중개수수료','중개수수료(복비)',1280000,'필요경비'),
+   W('2026-09-03','철거',[{name:'철거 반장',rate:300000,count:1,days:1},{name:'조공',rate:180000,count:2,days:1}],[{name:'폐기물 처리비',amount:450000},{name:'식대',amount:45000}],'필요경비'),
+   M('2026-09-05','벽 타일','동네타일',12,'박스',28000,'필요경비'),M('2026-09-05','바닥 타일','동네타일',6,'박스',32000,'필요경비'),M('2026-09-05','타일 본드','동네타일',8,'포',9500,'필요경비'),
+   W('2026-09-06','타일 시공',[{name:'타일 기사',rate:300000,count:1,days:2},{name:'조공',rate:180000,count:1,days:2}],[{name:'식대',amount:60000}],'필요경비'),
+   M('2026-09-08','실크 벽지','A도배자재',12,'롤',42000,'사업경비'),
+   W('2026-09-09','도배',[{name:'도배 기사',rate:250000,count:2,days:1}],[{name:'식대',amount:30000}],'사업경비','계좌이체 (원천세 신고)','거실·안방·작은방 실크'),
+   M('2026-09-10','장판','바닥나라',30,'m',18000,'사업경비'),
+   W('2026-09-11','장판 시공',[{name:'장판 기사',rate:220000,count:1,days:1}],[],'사업경비'),
+   M('2026-09-12','수전','한빛설비',2,'개',85000,'필요경비'),M('2026-09-12','양변기','한빛설비',1,'개',230000,'필요경비'),
+   W('2026-09-12','설비·배관',[{name:'설비 기사',rate:350000,count:1,days:1}],[{name:'운반비',amount:30000}],'필요경비'),
+   M('2026-09-15','페인트','컬러페인트',3,'통',38000,'사업경비'),M('2026-09-18','조명','밝은조명',6,'개',45000,'필요경비'),
+   W('2026-09-20','입주 청소',[{name:'청소 업체',rate:400000,count:1,days:1}],[],'사업경비','카드'),
+   C('2026-09-30','대출 이자 9월','이자',820000,'사업경비'),
+   M('2026-10-02','실크 벽지','B인테리어자재',4,'롤',39000,'사업경비'),
+   W('2026-10-03','도배',[{name:'도배 기사',rate:270000,count:1,days:1}],[],'사업경비','계좌이체 (원천세 신고)','작은방 보수'),
+   C('2026-10-25','관리비 10월','관리비·공과금',150000,'사업경비'),C('2026-10-31','대출 이자 10월','이자',820000,'사업경비'),
+   M('2026-11-10','실크 벽지','A도배자재',3,'롤',44000,'사업경비')];
+  return{project,costs:costs.map((c,i)=>({...c,id:P+'-'+i}))}}
+async function addExample(){const {project,costs}=exampleData();
+  const {id,...pd}=project;S.projects.push(project);costs.forEach(c=>S.costs.push(c));persist();render();toast('예시 프로젝트를 넣었어요');S.pid=id;S.view='detail';render();scrollTo(0,0)}
 function pForm(p={}){S.form={k:'p',id:p.id||null};const m=v=>v?(+v).toLocaleString():'';
   const f=(id,l,n,v,t='text')=>`<div><label for="${id}">${l}</label><input id="${id}" name="${n}" ${t==='date'?'type="date"':'class="money" inputmode="numeric"'} value="${esc(v)}"></div>`;
   openSheet(`<h2>${p.id?'프로젝트 수정':'새 프로젝트'}</h2><form id="f">
@@ -462,7 +488,7 @@ function cForm(pid,date){S.form={k:'c'};openSheet(`<h2>비용 기록</h2><form i
   <p class="note" style="margin:12px 2px 0">필요경비: 팔 때 예정신고에서 빠지는 비용(취득세·법무사·복비·자재·공사) · 사업경비: 연말 종합소득세에서만 빠지는 비용(이자·기장료)</p>
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`)}
 
-document.addEventListener('input',e=>{const t=e.target;if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():''}
+document.addEventListener('input',e=>{const t=e.target;if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():'';if(t===chipFor)krShow(t)}
   if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();if(t.id==='k-n')wkHint();if(t.closest&&t.closest('#wk')){if(t.classList.contains('w-n')){const r=t.closest('.wrow').querySelector('.w-r');if(!r.value){const last=S.costs.filter(c=>c.workers).sort((a,b)=>String(b.date).localeCompare(String(a.date))).flatMap(c=>c.workers).find(w=>w.name===t.value.trim()&&+w.rate);if(last)r.value=(+last.rate).toLocaleString()}}wkTotal()}
   if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
   if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
@@ -483,6 +509,8 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
   if(ds.go){S.view=ds.go;S.armed=null;if(ds.go!=='tax')S.draft=null;render();scrollTo(0,0)}
   else if(ds.open){S.pid=ds.open;S.view='detail';closeSheet();render();scrollTo(0,0)}
   else if('newp' in ds)wzStart();
+  else if('example' in ds)addExample();
+  else if(ds.chip){const inp=chipFor;if(!inp)return;let v=num(inp.value);if(ds.chip==='c')v=0;else if(ds.chip==='000')v=v*1000;else v+=+ds.chip;inp.value=v?v.toLocaleString():'';inp.dispatchEvent(new Event('input',{bubbles:true}));krShow(inp)}
   else if(ds.wpick!==undefined){const st=wzVis().find(s=>s.k===S.wiz.k);S.wiz.d[st.f]=st.num?+ds.wpick:ds.wpick;if(st.f==='housesBuy'&&!S.wiz.d.housesSell)S.wiz.d.housesSell=+ds.wpick;if(st.f==='type'&&!isHouse({type:ds.wpick})&&!S.wiz.d.vat)S.wiz.d.vat='과세';wzGo(1)}
   else if('wback' in ds)wzGo(-1);
   else if(ds.costbd)costSheet(ds.costbd);
@@ -513,6 +541,12 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
     S.set={...S.set,deduction:d.deduction,local:d.local,brackets:S.draft.brackets.map(r=>[...r])};persist();
     S.draft=null;render();toast('세율을 저장했어요')}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+let chipFor=null;
+function krShow(t){const k=document.querySelector('.chips .kr');if(k){const v=num(t.value);k.textContent=v>=1e4?'= '+won(v)+'원':''}}
+document.addEventListener('focusin',e=>{const t=e.target;if(!t.classList||!t.classList.contains('money'))return;if(chipFor===t&&document.querySelector('.chips'))return;document.querySelectorAll('.chips').forEach(c=>c.remove());chipFor=t;
+  const at=t.closest('.two,.three,.wrow,.xrow')||t;at.insertAdjacentHTML('afterend',`<div class="chips">${[['100000000','+1억'],['10000000','+1천만'],['1000000','+100만'],['100000','+10만'],['10000','+1만'],['000','000'],['c','지움']].map(([v,l])=>`<button type="button" class="chip" data-chip="${v}">${l}</button>`).join('')}<span class="kr"></span></div>`);krShow(t)});
+document.addEventListener('focusout',()=>setTimeout(()=>{const a=document.activeElement;if(!a||!a.classList||!a.classList.contains('money')){document.querySelectorAll('.chips').forEach(c=>c.remove());chipFor=null}},200));
+for(const ev of['pointerdown','mousedown'])document.addEventListener(ev,e=>{if(e.target.closest&&e.target.closest('.chip'))e.preventDefault()});
 
 load();S.mode='ready';render();
 try{navigator.storage?.persist?.()}catch(_){}
