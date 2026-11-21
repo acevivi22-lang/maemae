@@ -346,7 +346,7 @@ function wForm(pid,pre={}){S.form={k:'wk'};const P=pre.pid??(pid||S.lastPid||'')
   <label for="k-m">메모</label><input id="k-m" name="memo" value="${esc(pre.memo||'')}" placeholder="예: 안방·거실 실크">
   <p class="note" style="margin:12px 2px 0">작업을 목록에서 고르면 지난번 인원 구성이 자동으로 채워져요. 인건비는 원천세 신고나 세금계산서가 있어야 경비로 인정돼요.</p>
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`);wkHint();wkTotal();if(!pre.item)setTimeout(()=>$('#k-n')?.focus(),60)}
-function wkTotal(){const f=$('#wk');if(!f)return 0;let lab=0,ex=0;f.querySelectorAll('.wrow').forEach(r=>{lab+=num(r.querySelector('.w-r').value)*(num(r.querySelector('.w-c').value)||1)*(num(r.querySelector('.w-d').value)||1)});
+function wkTotal(){const f=$('#wk')||$('#wz');if(!$('#k-tot'))return 0;if(!f)return 0;let lab=0,ex=0;f.querySelectorAll('.wrow').forEach(r=>{lab+=num(r.querySelector('.w-r').value)*(num(r.querySelector('.w-c').value)||1)*(num(r.querySelector('.w-d').value)||1)});
   f.querySelectorAll('.xrow').forEach(r=>{ex+=num(r.querySelector('.x-a').value)});$('#k-lab').textContent=Math.round(lab).toLocaleString();$('#k-ex').textContent=ex.toLocaleString();$('#k-tot').textContent=Math.round(lab+ex).toLocaleString();return Math.round(lab+ex)}
 function wkHint(){const n=$('#k-n')?.value.trim(),h=$('#k-hint');if(!h)return;const x=n&&works().find(w=>w.n===n);
   if(!x){h.innerHTML=n?'처음 기록하는 작업이에요':'';const e=$('#k-e');if(e&&n)e.value=WORK_BIZ.includes(n)?'사업경비':'필요경비';return}
@@ -378,6 +378,7 @@ function acUpdate(inp){if(acLock){acLock=false;return}const w=inp.closest('.acw'
 function acClose(){document.querySelectorAll('.acl.on').forEach(l=>l.classList.remove('on'));document.querySelectorAll('.ghost').forEach(g=>g.innerHTML='');acCur=null}
 function acAccept(inp,v){inp.value=v;acLock=true;inp.dispatchEvent(new Event('input',{bubbles:true}));acClose();
   if(inp.id==='k-n'){const rows=[...document.querySelectorAll('#wk .wrow')];const empty=rows.every(r=>!r.querySelector('.w-n').value&&!r.querySelector('.w-r').value);const last=works().find(x=>x.n===v);if(empty&&last)wkFill(last.a[0].id)}
+  if(inp.dataset.go&&inp.closest('#wz')){const wf=inp.closest('#wz');setTimeout(()=>wzNext(wf),0);return}
   const nx=inp.dataset.next?$('#'+inp.dataset.next):inp.classList.contains('w-n')?inp.closest('.wrow').querySelector('.w-r'):inp.classList.contains('x-n')?inp.closest('.xrow').querySelector('.x-a'):null;
   if(nx)setTimeout(()=>nx.focus(),0)}
 document.addEventListener('focusin',e=>{const t=e.target;if(t.dataset&&t.dataset.ac)acUpdate(t)});
@@ -456,20 +457,68 @@ const WZ=[
    +`<div class="stats" style="margin-top:14px"><div class="stat"><span>예상 취득세</span><b>${won(c.acq.total)}</b></div><div class="stat"><span>예상 세금</span><b>${won(c.tax)}</b></div><div class="stat hi"><span>세후 이익 · 수익률</span><b>${won(c.after)} · ${pct(c.roi)}</b></div></div>`}}
 ];
 const wzProj=d=>({id:'__wz',status:'진행중',type:'아파트',region:'비수도권',housesBuy:1,housesSell:1,over85:'이하',lowPrice:'아니오',vat:'면세',vatIncl:'별도',rentType:'없음',sellDate:'',sellPrice:0,lt:0,...d});
-const wzVis=()=>WZ.filter(s=>!s.show||s.show(wzProj(S.wiz.d)));
-function wzStart(){S.wiz={d:{},k:'name'};S.form={k:'w'};wzRender()}
-function wzRender(){const d=S.wiz.d,vis=wzVis(),i=Math.max(0,vis.findIndex(s=>s.k===S.wiz.k)),st=vis[i],cur=st.f?wzProj(d)[st.f]:null,last=st.k==='done';S.form={k:'w'};
-  openSheet(`<div class="wz-top"><button type="button" class="back" data-wback>${icon('back',20)} ${i?'이전':'닫기'}</button><span class="sub">${i+1} / ${vis.length}</span></div>
+const todayIso=()=>iso(new Date()),yIso=()=>{const d=new Date();d.setDate(d.getDate()-1);return iso(d)};
+const projCh=()=>[['','공통 (여러 건에 같이)'],...sorted().map(p=>[p.id,p.name])];
+const dateStep={k:'date',t:'언제였나요?',s:'오늘·어제는 바로 누르고, 다른 날이면 아래에서 골라요',ch:()=>[['t','오늘 · '+todayIso().slice(5)],['y','어제 · '+yIso().slice(5)]],cur:d=>d.date===todayIso()?'t':d.date===yIso()?'y':'',pick:(v,d)=>{d.date=v==='t'?todayIso():yIso()},
+  h:d=>`<label for="w-dt">다른 날짜</label><input id="w-dt" type="date" name="date" value="${d.date||todayIso()}">`,r:f=>({date:f.date||todayIso()})};
+const pidStep=what=>({k:'pid',t:'어느 프로젝트의 '+what+'인가요?',s:'여러 건에 같이 쓰는 거면 공통을 골라요',ch:projCh,f:'pid'});
+const dedCh=rec=>DEDS.map(x=>[x,x+(x===rec?' (추천)':'')+(x==='필요경비'?' — 팔 때 바로 빠져요':x==='사업경비'?' — 5월 정산 때 빠져요':' — 경비 인정 안 돼요')]);
+const kvs=rows=>rows.filter(Boolean).map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('');
+const WM=[pidStep('자재'),dateStep,
+ {k:'mname',t:'어떤 자재를 샀나요?',s:'목록에서 고르면 지난 단위·단가·구매처가 채워져요',h:d=>acInput({id:'w-mn',name:'item',ac:'mat',value:d.item,ph:'예: 실크 벽지 (초성 ㅅㅋ도 돼요)'}).replace('data-ac=','data-go="1" data-ac='),
+  r:(f,_,d)=>{const n=f.item.trim();if(n&&n!==d.item){const x=mats().find(m=>m.n===n),l=x&&x.last;d.unit=l?l.unit||'':'';d.unitPrice=l?+l.unitPrice:0;if(l&&!d.store)d.store=l.store||'';d.ded=MAT_BIZ.includes(n)?'사업경비':(l&&l.ded)||'필요경비';d.qty=''}return{item:n}},v:d=>d.item?'':'자재 이름을 넣어 주세요'},
+ {k:'mqty',t:d=>esc(d.item)+' 몇 개를 얼마에 샀나요?',s:'수량과 단가를 넣으면 금액이 계산돼요',h:d=>`<div class="three"><div><label for="w-q">수량</label><input id="w-q" name="qty" inputmode="decimal" value="${d.qty||''}"></div><div><label for="w-u">단위</label><input id="w-u" name="unit" value="${esc(d.unit||'')}" placeholder="개"></div><div><label for="w-up">단가</label><input id="w-up" class="money" name="unitPrice" inputmode="numeric" value="${d.unitPrice?(+d.unitPrice).toLocaleString():''}"></div></div>
+   <div class="chips uchips" style="margin-top:8px">${['개','박스','장','롤','포','통','m','㎡','세트'].map(u=>`<button type="button" class="chip" data-unit="${u}">${u}</button>`).join('')}</div>
+   <label for="w-amt">금액</label><input id="w-amt" class="money" name="amount" inputmode="numeric" value="${d.amount?(+d.amount).toLocaleString():''}">`,
+  r:f=>({qty:num(f.qty),unit:f.unit.trim(),unitPrice:num(f.unitPrice),amount:num(f.amount)||Math.round(num(f.qty)*num(f.unitPrice))}),v:d=>d.amount?'':'수량·단가나 금액을 넣어 주세요'},
+ {k:'store',t:'어디서 샀나요?',s:'가게를 적어 두면 어디가 싼지 비교해 줘요 (건너뛰어도 돼요)',h:d=>acInput({id:'w-st',name:'store',ac:'store',value:d.store,ph:'예: ○○건재'}).replace('data-ac=','data-go="1" data-ac='),r:f=>({store:f.store.trim()})},
+ {k:'receipt',t:'증빙은 뭐로 받았나요?',s:'증빙이 없으면 경비로 인정받기 어려워요',ch:()=>['카드','현금영수증','세금계산서','없음'].map(x=>[x,x]),f:'receipt',pick:(v,d)=>{d.receipt=v;if(v==='없음')d.ded='불공제'}},
+ {k:'ded',show:d=>d.receipt!=='없음',t:'세금 처리는 어떻게 할까요?',s:'가치를 올리는 자재는 필요경비, 도배·장판·페인트 같은 수리용은 사업경비예요',ch:d=>dedCh(MAT_BIZ.includes(S.wiz.d.item)?'사업경비':'필요경비'),f:'ded'},
+ {k:'done',t:'이대로 저장할까요?',s:'영수증에 자재가 더 있으면 "저장 후 다음 자재"를 눌러요',h:d=>kvs([['자재',esc(d.item)],['프로젝트',esc(pname(d.pid))],['날짜',d.date],d.qty?['수량 × 단가',`${(+d.qty).toLocaleString()}${esc(d.unit||'')} × ${(+d.unitPrice).toLocaleString()}원`]:null,['금액',full(d.amount)],['구매처',esc(d.store||'–')],['증빙 · 공제',esc(d.receipt||'카드')+' · '+esc(d.ded||'필요경비')]]),
+  btns:`<div class="two" style="margin-top:18px"><button class="btn pri" type="submit">저장</button><button class="btn" type="submit" data-more>저장 후 다음 자재</button></div>`,
+  save:async(d,sub)=>{const c={pid:d.pid||'',date:d.date||todayIso(),item:d.item,cat:'자재비',store:d.store||'',qty:+d.qty||0,unit:d.unit||'',unitPrice:+d.unitPrice||0,amount:+d.amount,receipt:d.receipt||'카드',ded:d.ded||'필요경비'};S.lastPid=c.pid;
+   if(!(await put('costs',null,c)))return;if(sub&&'more' in sub.dataset){S.wiz={type:'m',d:{pid:c.pid,date:c.date,store:c.store,receipt:c.receipt},k:'mname'};wzRender();toast(c.item+' 저장 · 다음 자재를 넣어요')}else{closeSheet();S.wiz=null;render();toast('자재를 기록했어요')}}}];
+const WW=[pidStep('작업'),dateStep,
+ {k:'wname',t:'어떤 작업을 했나요?',s:'목록에서 고르면 지난번 인원 구성을 불러와요',h:d=>acInput({id:'w-wn',name:'item',ac:'work',value:d.item,ph:'예: 도배 (초성 ㄷㅂ도 돼요)'}).replace('data-ac=','data-go="1" data-ac='),
+  r:(f,_,d)=>{const n=f.item.trim();if(n&&n!==d.item){const x=works().find(w=>w.n===n),l=x&&x.a[0];d.workers=l?JSON.parse(JSON.stringify(l.workers||[])):[];d.extras=l?JSON.parse(JSON.stringify(l.extras||[])):[];d.ded=WORK_BIZ.includes(n)?'사업경비':(l&&l.ded)||'필요경비';d.loaded=!!l}return{item:n}},v:d=>d.item?'':'작업 이름을 넣어 주세요'},
+ {k:'crew',t:'누가 며칠 일했나요?',s:d=>d.loaded?'지난번 구성을 불러왔어요. 일당과 일수만 확인하세요':'한 줄에 한 역할씩: 이름·역할, 일당, 인원, 일수',h:d=>`<div class="rowhead" style="margin-top:4px"><span></span><span class="sub">일당 · 인원 · 일수</span></div><div id="wk-rows">${(d.workers&&d.workers.length?d.workers:[{}]).map(wrow).join('')}</div>
+   <button type="button" class="btn sm" data-addrow="w" style="width:100%;margin-top:8px">+ 인원 추가</button><div class="mstat" style="margin-top:14px"><span>인건비 <b id="k-lab">0</b></span><span>기타 <b id="k-ex">0</b></span><span>합계 <b id="k-tot">0</b></span></div>`,
+  r:(f,form)=>({workers:[...form.querySelectorAll('.wrow')].map(r=>({name:r.querySelector('.w-n').value.trim(),rate:num(r.querySelector('.w-r').value),count:num(r.querySelector('.w-c').value)||1,days:num(r.querySelector('.w-d').value)||1})).filter(w=>w.name||w.rate)})},
+ {k:'extra',t:'다른 비용도 있었나요?',s:'식대, 장비 대여, 폐기물 처리비 등. 없으면 바로 다음',h:d=>`<div id="ex-rows">${(d.extras||[]).map(xrow).join('')}</div><button type="button" class="btn sm" data-addrow="x" style="width:100%;margin-top:8px">+ 기타 비용 추가</button>
+   <div style="display:none" id="wk-rows">${(d.workers||[]).map(wrow).join('')}</div><div class="mstat" style="margin-top:14px"><span>인건비 <b id="k-lab">0</b></span><span>기타 <b id="k-ex">0</b></span><span>합계 <b id="k-tot">0</b></span></div>`,
+  r:(f,form)=>({extras:[...form.querySelectorAll('.xrow')].map(r=>({name:r.querySelector('.x-n').value.trim(),amount:num(r.querySelector('.x-a').value)})).filter(x=>x.amount)}),v:d=>labor(d)+extraSum(d)>0?'':'일당이나 기타 비용을 넣어 주세요'},
+ {k:'receipt',t:'어떻게 지급했나요?',s:'인건비는 원천세 신고나 세금계산서가 있어야 경비로 인정돼요',ch:()=>['계좌이체 (원천세 신고)','세금계산서','카드','현금·증빙 없음'].map(x=>[x,x]),f:'receipt',pick:(v,d)=>{d.receipt=v;if(v==='현금·증빙 없음')d.ded='불공제'}},
+ {k:'ded',show:d=>d.receipt!=='현금·증빙 없음',t:'세금 처리는 어떻게 할까요?',s:'도배·장판·도장은 사업경비, 샷시·확장·설비는 필요경비가 기본이에요',ch:()=>dedCh(WORK_BIZ.includes(S.wiz.d.item)?'사업경비':'필요경비'),f:'ded'},
+ {k:'memo',t:'메모를 남길까요?',s:'어느 방을 했는지 등. 없으면 바로 다음',h:d=>`<input id="w-me" name="memo" value="${esc(d.memo||'')}" placeholder="예: 안방·거실 실크" autocomplete="off">`,r:f=>({memo:f.memo.trim()})},
+ {k:'done',t:'이대로 저장할까요?',h:d=>kvs([['작업',esc(d.item)],['프로젝트',esc(pname(d.pid))],['날짜',d.date],...(d.workers||[]).map(w=>[esc(w.name||'인원'),`${(+w.rate).toLocaleString()} × ${w.count}명 × ${w.days}일`]),...(d.extras||[]).map(x=>[esc(x.name||'기타'),full(x.amount)]),['합계',full(labor(d)+extraSum(d))],['지급 · 공제',esc(d.receipt||'계좌이체')+' · '+esc(d.ded||'필요경비')],d.memo?['메모',esc(d.memo)]:null]),
+  save:async d=>{const c={kind:'work',pid:d.pid||'',date:d.date||todayIso(),item:d.item,cat:'공사·인건비',workers:d.workers||[],extras:d.extras||[],amount:labor(d)+extraSum(d),receipt:d.receipt||'계좌이체 (원천세 신고)',ded:d.ded||'필요경비',memo:d.memo||''};S.lastPid=c.pid;
+   if(await put('costs',null,c)){closeSheet();S.wiz=null;render();toast('작업을 기록했어요')}}}];
+const wzArr=()=>({p:WZ,m:WM,w:WW}[S.wiz.type||'p']);
+const wzCtx=d=>S.wiz.type==='p'?wzProj(d):d;
+const wzVis=()=>wzArr().filter(s=>!s.show||s.show(wzCtx(S.wiz.d)));
+function wzStart(){S.wiz={type:'p',d:{},k:'name'};wzRender()}
+function wzStartM(pre={},k='pid'){S.wiz={type:'m',d:{pid:S.lastPid||'',date:todayIso(),receipt:'카드',...pre},k};wzRender()}
+function wzStartW(pre={},k='pid'){S.wiz={type:'w',d:{pid:S.lastPid||'',date:todayIso(),receipt:'계좌이체 (원천세 신고)',...pre},k};wzRender()}
+function wzRender(){const d=S.wiz.d,vis=wzVis(),i=Math.max(0,vis.findIndex(s=>s.k===S.wiz.k)),st=vis[i],cx=wzCtx(d),cur=st.cur?st.cur(d):st.f?cx[st.f]:null,last=st.k==='done';S.wiz.k=st.k;S.form={k:'w'};
+  const T={p:'새 프로젝트',m:'자재 구매 기록',w:'작업 기록'}[S.wiz.type||'p'],tt=typeof st.t==='function'?st.t(d):st.t,ss=typeof st.s==='function'?st.s(cx):st.s||'';
+  openSheet(`<div class="wz-top"><button type="button" class="back" data-wback>${icon('back',20)} ${i?'이전':'닫기'}</button><span class="sub">${T} · ${i+1} / ${vis.length}</span></div>
   <div class="wz-bar"><i style="width:${(i+1)/vis.length*100}%"></i></div>
-  <h2>${st.t}</h2><p class="sub" style="margin:0 0 6px">${typeof st.s==='function'?st.s(wzProj(d)):st.s||''}</p>
-  <form id="wz">${st.ch?st.ch().map(([v,l])=>`<button type="button" class="opt${String(cur)===String(v)?' on':''}" data-wpick="${esc(v)}">${esc(l)}</button>`).join(''):st.h(d)}
+  <h2>${tt}</h2><p class="sub" style="margin:0 0 6px">${ss}</p>
+  <form id="wz">${st.ch?st.ch(cx).map(([v,l])=>`<button type="button" class="opt${String(cur)===String(v)?' on':''}" data-wpick="${esc(v)}">${esc(l)}</button>`).join(''):''}${st.h?(st.ch?'<div style="margin-top:6px">'+st.h(d)+'</div>':st.h(d)):''}
   <div id="w-hint" class="whint"></div>
-  ${st.ch?'':`<button class="btn pri" type="submit" style="width:100%;margin-top:18px">${last?'프로젝트 만들기':'다음'}</button>`}</form>`);wzHint()}
-function wzGo(n){const vis=wzVis(),i=vis.findIndex(s=>s.k===S.wiz.k),j=i+n;if(j<0){closeSheet();return}S.wiz.k=vis[Math.min(j,vis.length-1)].k;wzRender()}
-async function wzNext(form){const vis=wzVis(),st=vis.find(s=>s.k===S.wiz.k);if(st.r)Object.assign(S.wiz.d,st.r(Object.fromEntries(new FormData(form))));
-  const err=st.v&&st.v(wzProj(S.wiz.d));if(err){toast(err);return}
+  ${st.btns||(st.ch&&!st.h?'':`<button class="btn pri" type="submit" style="width:100%;margin-top:18px">${last?(S.wiz.type==='p'?'프로젝트 만들기':'저장'):'다음'}</button>`)}</form>`);
+  if(st.k==='crew'||st.k==='extra')wkTotal();wzHint();const fi=$('#wz input:not([type=date])');if(fi&&!st.ch)setTimeout(()=>fi.focus(),60)}
+function wzGo(n){const vis=wzVis(),i=vis.findIndex(s=>s.k===S.wiz.k),j=i+n;if(j<0){closeSheet();S.wiz=null;return}S.wiz.k=vis[Math.min(j,vis.length-1)].k;wzRender()}
+async function wzNext(form,sub){const vis=wzVis(),st=vis.find(s=>s.k===S.wiz.k);if(st.r)Object.assign(S.wiz.d,st.r(Object.fromEntries(new FormData(form)),form,S.wiz.d));
+  const err=st.v&&st.v(wzCtx(S.wiz.d));if(err){toast(err);return}
+  if(st.save){await st.save(S.wiz.d,sub);return}
   if(st.k==='done'){const {id,...data}=wzProj(S.wiz.d);if(await put('projects',null,data)){closeSheet();S.wiz=null;S.view='home';render();toast('프로젝트를 만들었어요')}return}wzGo(1)}
 function wzHint(){const h=$('#w-hint');if(!h||!S.wiz)return;const d={...S.wiz.d},k=S.wiz.k;
+  if(S.wiz.type==='m'&&k==='mname'){const n=$('#w-mn')?.value.trim(),x=n&&mats().find(m=>m.n===n);h.innerHTML=x&&x.last?`지난번 ${(+x.last.unitPrice).toLocaleString()}원/${esc(x.last.unit||'개')}${x.last.store?' · '+esc(x.last.store):''} (${esc(x.last.date)}) · 최저 ${x.min.toLocaleString()}원`:n?'처음 기록하는 자재예요':'';return}
+  if(S.wiz.type==='m'&&k==='mqty'){const q=num($('#w-q')?.value),p=num($('#w-up')?.value),a=$('#w-amt');if(a&&q&&p&&document.activeElement!==a)a.value=Math.round(q*p).toLocaleString();const x=mats().find(m=>m.n===d.item);
+    h.innerHTML=x&&x.min&&p?(p>x.min?`최저가(${x.min.toLocaleString()}원)보다 <b>${(p-x.min).toLocaleString()}원 비싸요</b>`:p<x.min?`지금까지 중 <b>가장 싸요</b>`:'최저가와 같아요'):'';return}
+  if(S.wiz.type==='w'&&k==='wname'){const n=$('#w-wn')?.value.trim(),x=n&&works().find(w=>w.n===n);h.innerHTML=x?`지난번 ${esc(x.a[0].date)} · ${won(x.a[0].amount)} · ${(x.a[0].workers||[]).map(w=>esc(w.name)).join(', ')}`:n?'처음 기록하는 작업이에요':'';return}
+  if(S.wiz.type!=='p'){h.textContent='';return}
   if(k==='buy'){const v=num($('#w-bp')?.value);if(!v){h.textContent='';return}const a=acqTax(wzProj({...d,buyPrice:v}));h.innerHTML=`예상 취득세 <b>${full(a.total)}</b> (${a.tot.toFixed(2)}%${a.heavy?' · 중과':''})`}
   else if(k==='plan'){const pd=$('#w-pd')?.value,pp=num($('#w-pp')?.value),b=day(d.buyDate);const bits=[];
     if(b&&pd){const m=dd(b,day(pd))/30.4375;bits.push('보유 약 '+m.toFixed(1)+'개월');const j=new Date(day(pd).getFullYear(),5,1);if(day(pd)>j&&b<=j)bits.push('6월 1일 보유 → 그해 재산세 발생')}
@@ -530,13 +579,13 @@ function cForm(pid,date){S.form={k:'c'};openSheet(`<h2>비용 기록</h2><form i
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`)}
 
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset&&t.dataset.ac&&document.activeElement===t)acUpdate(t);if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():'';if(t===chipFor)krShow(t)}
-  if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();if(t.id==='k-n')wkHint();if(t.closest&&t.closest('#wk')){if(t.classList.contains('w-n')){const r=t.closest('.wrow').querySelector('.w-r');if(!r.value){const last=S.costs.filter(c=>c.workers).sort((a,b)=>String(b.date).localeCompare(String(a.date))).flatMap(c=>c.workers).find(w=>w.name===t.value.trim()&&+w.rate);if(last)r.value=(+last.rate).toLocaleString()}}wkTotal()}
+  if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();if(t.id==='k-n')wkHint();if(t.closest&&t.closest('#wk,#wz')&&(t.closest('.wrow,.xrow'))){if(t.classList.contains('w-n')){const r=t.closest('.wrow').querySelector('.w-r');if(!r.value){const last=S.costs.filter(c=>c.workers).sort((a,b)=>String(b.date).localeCompare(String(a.date))).flatMap(c=>c.workers).find(w=>w.name===t.value.trim()&&+w.rate);if(last)r.value=(+last.rate).toLocaleString()}}wkTotal()}
   if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
   if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
 document.addEventListener('change',e=>{if(e.target.id==='p-ty'){const v=$('#p-v');if(v&&(e.target.value==='상가'||e.target.value==='오피스텔'))v.value='과세'}if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';f.text().then(t=>{let d;try{d=JSON.parse(t)}catch(_){toast('백업 파일을 읽지 못했어요');return}
   if(!d||!Array.isArray(d.projects)){toast('매매 프로젝트 백업 파일이 아니에요');return}S.pending=d;
   openSheet(`<h2>백업 불러오기</h2><p class="sub">프로젝트 ${d.projects.length}건, 비용 ${(d.costs||[]).length}건이 들어 있어요${d.exportedAt?' ('+esc(String(d.exportedAt).slice(0,10))+' 백업)':''}. 지금 앱에 있는 데이터는 이 백업으로 바뀌어요.</p><div class="acts"><button class="btn pri" data-impok>불러오기</button><button class="btn" data-close>취소</button></div>`)})}if(e.target.id==='m-r'&&e.target.value==='없음'){const d=$('#m-e');if(d)d.value='불공제'}if(e.target.id==='c-c'){const d=$('#c-e');if(d&&CAT_DED[e.target.value])d.value=CAT_DED[e.target.value]}if(S.view==='tax'&&(e.target.dataset.bl||e.target.dataset.br))render()});
-document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==='wz'){wzNext(e.target);return}
+document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==='wz'){wzNext(e.target,e.submitter);return}
   if(e.target.id==='wk'){const f=e.target,fd=Object.fromEntries(new FormData(f));const workers=[...f.querySelectorAll('.wrow')].map(r=>({name:r.querySelector('.w-n').value.trim(),rate:num(r.querySelector('.w-r').value),count:num(r.querySelector('.w-c').value)||1,days:num(r.querySelector('.w-d').value)||1})).filter(w=>w.name||w.rate);
     const extras=[...f.querySelectorAll('.xrow')].map(r=>({name:r.querySelector('.x-n').value.trim(),amount:num(r.querySelector('.x-a').value)})).filter(x=>x.amount);
     const d={kind:'work',pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'공사·인건비',workers,extras,amount:wkTotal(),receipt:fd.receipt,ded:fd.receipt==='현금·증빙 없음'?'불공제':fd.ded,memo:fd.memo.trim()};
@@ -554,7 +603,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
   else if(ds.acpick!==undefined){if(acCur)acAccept(acCur.inp,acCur.items[+ds.acpick].v)}
   else if(ds.dset!==undefined){const d=new Date();d.setDate(d.getDate()+ +ds.dset);const i=$('#'+ds.for);if(i)i.value=iso(d)}
   else if(ds.chip){const inp=chipFor;if(!inp)return;let v=num(inp.value);if(ds.chip==='c')v=0;else if(ds.chip==='000')v=v*1000;else v+=+ds.chip;inp.value=v?v.toLocaleString():'';inp.dispatchEvent(new Event('input',{bubbles:true}));krShow(inp)}
-  else if(ds.wpick!==undefined){const st=wzVis().find(s=>s.k===S.wiz.k);S.wiz.d[st.f]=st.num?+ds.wpick:ds.wpick;if(st.f==='housesBuy'&&!S.wiz.d.housesSell)S.wiz.d.housesSell=+ds.wpick;if(st.f==='type'&&!isHouse({type:ds.wpick})&&!S.wiz.d.vat)S.wiz.d.vat='과세';wzGo(1)}
+  else if(ds.wpick!==undefined){const st=wzVis().find(s=>s.k===S.wiz.k);if(st.pick)st.pick(ds.wpick,S.wiz.d);else S.wiz.d[st.f]=st.num?+ds.wpick:ds.wpick;if(st.f==='housesBuy'&&!S.wiz.d.housesSell)S.wiz.d.housesSell=+ds.wpick;if(st.f==='type'&&!isHouse({type:ds.wpick})&&!S.wiz.d.vat)S.wiz.d.vat='과세';wzGo(1)}
   else if('wback' in ds)wzGo(-1);
   else if(ds.costbd)costSheet(ds.costbd);
   else if('export' in ds)exportData();
@@ -562,16 +611,17 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
   else if('impok' in ds){apply(S.pending);S.pending=null;persist();closeSheet();S.view='home';render();toast('백업을 불러왔어요')}
   else if(ds.editp!==undefined)pForm(S.projects.find(p=>p.id===ds.editp));
   else if(ds.addcost!==undefined)cForm(ds.addcost||(S.view==='detail'?S.pid:''),ds.date);
-  else if(ds.addwork!==undefined)wForm(ds.addwork||(S.view==='detail'?S.pid:''),ds.date?{date:ds.date}:{});
-  else if(ds.wagain){const c=S.costs.find(x=>x.id===ds.wagain);if(c)wForm(c.pid,{...c,date:''})}
+  else if(ds.addwork!==undefined){const pid=ds.addwork||(S.view==='detail'?S.pid:null);wzStartW({...(pid!=null?{pid}:{}),...(ds.date?{date:ds.date}:{})},pid!=null?'date':'pid')}
+  else if(ds.wagain){const c=S.costs.find(x=>x.id===ds.wagain);if(c)wzStartW({pid:c.pid,item:c.item,workers:JSON.parse(JSON.stringify(c.workers||[])),extras:JSON.parse(JSON.stringify(c.extras||[])),ded:c.ded,receipt:c.receipt,loaded:true},'date')}
   else if(ds.wkload)wkFill(ds.wkload);
   else if(ds.addrow){$(ds.addrow==='w'?'#wk-rows':'#ex-rows').insertAdjacentHTML('beforeend',ds.addrow==='w'?wrow():xrow());wkTotal()}
   else if('rowdel' in ds){t.parentElement.remove();wkTotal()}
   else if(ds.stab){S.stab=ds.stab;render()}
   else if(ds.day){S.cal.sel=ds.day;render()}
   else if(ds.cm){const c=S.cal;c.m+=+ds.cm;if(c.m<0){c.m=11;c.y--}if(c.m>11){c.m=0;c.y++}c.sel=`${c.y}-${String(c.m+1).padStart(2,'0')}-01`;render()}
-  else if(ds.addmat!==undefined)mForm(ds.addmat||(S.view==='detail'?S.pid:''),ds.date?{date:ds.date}:{});
-  else if(ds.again){const c=S.costs.find(x=>x.id===ds.again);if(c)mForm(c.pid,{...c,date:''})}
+  else if(ds.addmat!==undefined){const pid=ds.addmat||(S.view==='detail'?S.pid:null);wzStartM({...(pid!=null?{pid}:{}),...(ds.date?{date:ds.date}:{})},pid!=null?'date':'pid')}
+  else if(ds.unit){const u=$('#w-u');if(u)u.value=ds.unit;$('#w-up')?.focus()}
+  else if(ds.again){const c=S.costs.find(x=>x.id===ds.again);if(c)wzStartM({pid:c.pid,item:c.item,unit:c.unit,unitPrice:+c.unitPrice||0,store:c.store,receipt:c.receipt,ded:c.ded},'date')}
   else if('close' in ds)closeSheet();
   else if(ds.delcost){if(S.armed!==ds.delcost){S.armed=ds.delcost;render();return}S.armed=null;await del('costs',ds.delcost);toast('삭제했어요')}
   else if(ds.delp){if(S.armed!==ds.delp){S.armed=ds.delp;t.textContent='한 번 더 누르면 비용 기록까지 삭제돼요';return}const id=ds.delp;closeSheet();
@@ -585,10 +635,10 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
     S.draft=null;render();toast('세율을 저장했어요')}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
 let chipFor=null;
-function krShow(t){const k=document.querySelector('.chips .kr');if(k){const v=num(t.value);k.textContent=v>=1e4?'= '+won(v)+'원':''}}
-document.addEventListener('focusin',e=>{const t=e.target;if(!t.classList||!t.classList.contains('money'))return;if(chipFor===t&&document.querySelector('.chips'))return;document.querySelectorAll('.chips').forEach(c=>c.remove());chipFor=t;
+function krShow(t){const k=document.querySelector('.chips:not(.uchips) .kr');if(k){const v=num(t.value);k.textContent=v>=1e4?'= '+won(v)+'원':''}}
+document.addEventListener('focusin',e=>{const t=e.target;if(!t.classList||!t.classList.contains('money'))return;if(chipFor===t&&document.querySelector('.chips'))return;document.querySelectorAll('.chips:not(.uchips)').forEach(c=>c.remove());chipFor=t;
   const at=t.closest('.two,.three,.wrow,.xrow')||t;at.insertAdjacentHTML('afterend',`<div class="chips">${[['100000000','+1억'],['10000000','+1천만'],['1000000','+100만'],['100000','+10만'],['10000','+1만'],['000','000'],['c','지움']].map(([v,l])=>`<button type="button" class="chip" data-chip="${v}">${l}</button>`).join('')}<span class="kr"></span></div>`);krShow(t)});
-document.addEventListener('focusout',()=>setTimeout(()=>{const a=document.activeElement;if(!a||!a.classList||!a.classList.contains('money')){document.querySelectorAll('.chips').forEach(c=>c.remove());chipFor=null}},200));
+document.addEventListener('focusout',()=>setTimeout(()=>{const a=document.activeElement;if(!a||!a.classList||!a.classList.contains('money')){document.querySelectorAll('.chips:not(.uchips)').forEach(c=>c.remove());chipFor=null}},200));
 for(const ev of['pointerdown','mousedown'])document.addEventListener(ev,e=>{if(e.target.closest&&e.target.closest('.chip'))e.preventDefault()});
 
 load();S.mode='ready';render();
