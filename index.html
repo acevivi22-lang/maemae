@@ -103,6 +103,10 @@ details.rki{border-top:1px solid var(--line);padding:12px 0}details.rki:first-of
 details.rki .sub{margin:8px 0 0 18px;font-size:14px}details.rki .how{margin:6px 0 0 18px;font-size:14px;color:var(--blue)}
 .rline{display:block;font-size:14px;padding:6px 0;color:inherit}
 .tg{width:46px;height:28px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .2s}.tg i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}.tg.on{background:var(--blue)}.tg.on i{left:21px}
+.simbox{background:var(--soft);border-radius:18px;padding:16px;margin-top:16px}.simprice{font-size:clamp(28px,9vw,36px);font-weight:800;letter-spacing:-.02em}
+.simsvg{width:100%;height:70px;display:block;margin-top:8px}.simlab{position:relative;height:30px;font-size:11px;color:var(--amber)}.simlab span{position:absolute;transform:translateX(-50%);white-space:nowrap}.simlab .mk{color:var(--green);top:14px;font-weight:600}
+#sim-r{width:100%;height:36px;accent-color:var(--blue);margin:2px 0 0;padding:0;background:none;border:0}
+.chip.on{border-color:var(--blue);color:var(--blue);font-weight:600}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 .note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
@@ -160,7 +164,7 @@ const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice
 function bk(x){const b=[...S.set.brackets].filter(r=>isFinite(r[0])).sort((a,c)=>a[0]-c[0]);let d=0,prev=0,rate=0,ded=0;
   for(const [l,r] of b){d+=l*(r-prev)/100;prev=r;if(x>=l){rate=r/100;ded=d}}return{rate,ded}}
 function tax(x,sur=0){if(x<=0)return 0;const{rate,ded}=bk(x);return x*rate-ded+x*sur}
-function calc(p){const cs=S.costs.filter(c=>c.pid===p.id);const sum=k=>cs.filter(c=>c.ded===k).reduce((a,c)=>a+(+c.amount||0),0);
+function calc(p){const cs=[...S.costs.filter(c=>c.pid===p.id),...(p._extra||[])];const sum=k=>cs.filter(c=>c.ded===k).reduce((a,c)=>a+(+c.amount||0),0);
   const acq=acqTax(p),hasAcq=cs.some(c=>c.cat==='취득세·등기'),acqAuto=hasAcq?0:acq.total;
   const need=sum('필요경비')+acqAuto,biz=sum('사업경비'),non=sum('불공제'),buy=+p.buyPrice||0,sold=(+p.sellPrice||0)>0,L=1+S.set.local/100;
   const gross=sold?+p.sellPrice:(+p.planSellPrice||0),vatAmt=p.vat==='과세'?Math.round((+p.vatBase||0)*.1):0,vatIn=p.vat==='과세'&&p.vatIncl==='포함'?vatAmt:0;
@@ -224,6 +228,66 @@ function riskCard(p){const rs=risks(p),n=rs.filter(x=>x.lv!=='g').length;
   return `<div class="card rk" style="margin-top:12px"><div class="row" style="justify-content:space-between"><b style="font-size:16px">세금 체크</b><span class="sub">${n?`주의 ${n}건`:'참고 '+rs.length+'건'}</span></div>
   ${rs.map(r=>`<details class="rki"><summary><i class="rdot ${r.lv}"></i><span class="grow">${r.t}</span>${r.amt>1e4?`<b class="${r.lv==='r'?'dn':''}">+${won(r.amt)}</b>`:''}</summary><div class="sub">${r.d}</div><div class="how">${r.how}</div></details>`).join('')}
   <div class="sub" style="font-size:12px;margin-top:10px">2026년 11월 세법 기준 추정치예요. 금액이 큰 항목은 세무사 확인을 권해요.</div></div>`}
+
+// ---------- 가격 시뮬레이터 ----------
+function simDefaults(mode,pid){const s={mode,pid,remain:0,sellFee:0.4,market:0,monthly:0,m:20};
+  if(mode==='proj'){const p=S.projects.find(x=>x.id===pid),c=calc(p),hold=c.cs.filter(x=>x.cat==='이자'||x.cat==='관리비·공과금').reduce((a,x)=>a+(+x.amount||0),0),b=day(p.buyDate),mo=b?Math.max(1,dd(b,today())/30.4375):1;s.monthly=Math.round(hold/mo/1e4)*1e4}
+  else{const hist=perPyHist();s.b={price:300000000,type:'아파트',region:'비수도권',hb:1,hs:1,area:84,lp:'아니오',perPy:hist||600000,months:6,loan:0,rate:4.5,mgmt:200000,buyFee:0.4};s.monthly=200000}
+  return s}
+function perPyHist(){const v=[];for(const p of S.projects){if(!+p.area)continue;const a=S.costs.filter(c=>c.pid===p.id&&(c.cat==='자재비'||c.kind==='work'||c.cat==='공사·인건비')).reduce((s,c)=>s+(+c.amount||0),0);if(a)v.push(a/(+p.area/3.3058))}return v.length?Math.round(v.reduce((a,x)=>a+x,0)/v.length/1e4)*1e4:0}
+function simProj(){const s=S.sim;if(s.mode==='proj')return{...S.projects.find(x=>x.id===s.pid)};const b=s.b,bd=today(),pd=new Date(bd);pd.setMonth(pd.getMonth()+(+b.months||6));
+  const p={id:'__sim',name:'매입 검토',type:b.type,region:b.region,housesBuy:+b.hb||1,housesSell:+b.hs||1,area:+b.area||0,over85:+b.area>85?'초과':'이하',lowPrice:b.lp,buyDate:iso(bd),buyPrice:+b.price||0,planSellDate:iso(pd),rentType:'없음',status:'진행중',vatIncl:'별도'};p.vat=!isHouse(p)||+b.area>85?'과세':'면세';return p}
+function simExtra(p,price){const s=S.sim,ex=[];
+  if(s.mode==='proj'){if(+s.remain)ex.push({ded:'필요경비',cat:'공사·인건비',amount:+s.remain})}
+  else{const b=s.b,P=+b.price||0,mo=+b.months||6;ex.push({ded:'필요경비',cat:'중개수수료(복비)',amount:Math.round(P*(+b.buyFee||0)/100)},{ded:'필요경비',cat:'법무사 수수료',amount:Math.round(Math.max(3e5,P*.001))},{ded:'필요경비',cat:'공사·인건비',amount:Math.round((+b.area||0)/3.3058*(+b.perPy||0))});
+    if(+b.loan)ex.push({ded:'사업경비',cat:'이자',amount:Math.round(+b.loan*(+b.rate||0)/100*mo/12)});if(+b.mgmt)ex.push({ded:'사업경비',cat:'관리비·공과금',amount:+b.mgmt*mo})}
+  if(price)ex.push({ded:'필요경비',cat:'중개수수료(복비)',amount:Math.round(price*(+s.sellFee||0)/100)});return ex}
+function simAt(price){const p=simProj(),q={...p,planSellPrice:price,sellPrice:0,sellDate:'',_extra:[...(p._extra||[]),...simExtra(p,price)]},c=calc(q),L=1+S.set.local/100;
+  const y=+String(q.planSellDate||iso(today())).slice(0,4),A=annual(y),others=A.sold.filter(x=>x.p.id!==p.id).length;let tx=c.tax;
+  if(!c.cmp&&others&&c.taxable>0)tx=(tax(Math.max(0,A.income+c.taxable-S.set.deduction))-tax(A.base))*L;const after=c.pre-tx;
+  return{price,q,c,tax:tx,after,roi:c.cost?after/c.cost:0,eff:c.pre>0?tx/c.pre:0,combined:!c.cmp&&others>0}}
+const simCost0=()=>simAt(0).c.cost;
+const simPrice=m=>{const c0=simCost0();return Math.max(0,Math.round(c0*(1+m/100)/1e6)*1e6)};
+function simOpen(mode,pid){S.sim=simDefaults(mode,pid);if(mode==='proj'){const p=S.projects.find(x=>x.id===pid),c0=simCost0(),pp=+p.planSellPrice||0;if(pp&&c0)S.sim.m=Math.max(-10,Math.min(80,Math.round((pp/c0-1)*100)))}simRender()}
+function simRender(){const s=S.sim,b=s.b,mo=v=>v?(+v).toLocaleString():'',sel=(n,opts,v)=>`<select name="${n}" data-sim>${opts.map(([k,l])=>`<option value="${k}" ${String(k)===String(v)?'selected':''}>${l}</option>`).join('')}</select>`,inp=(n,v,l,money,ph='')=>`<div><label>${l}</label><input name="${n}" data-sim ${money?'class="money" inputmode="numeric"':'inputmode="decimal"'} value="${money?mo(v):(v??'')}" placeholder="${ph}"></div>`;
+  const hist=perPyHist();
+  openSheet(`<div class="wz-top"><span class="sub">${s.mode==='proj'?esc(pname(s.pid)):'사기 전에 계산해 보기'}</span><button type="button" class="back" data-close>닫기 ✕</button></div>
+  <h2>${s.mode==='proj'?'적정 매도가 정하기':'매입 검토'}</h2><p class="sub" style="margin:0">${s.mode==='proj'?'지금까지 쓴 돈에 남은 비용을 더하고, 게이지로 마진을 조절해 보세요':'매입 정보만으로 비용·세금·적정 매도가를 추정해요'}</p>
+  <form id="sim" onsubmit="return false">
+  ${s.mode==='buy'?`<div class="two">${inp('price',b.price,'매입가',1)}${inp('area',b.area,'전용면적 (㎡)',0,'84')}</div>
+   <div class="two"><div><label>유형</label>${sel('type',TYPES.map(x=>[x,x]),b.type)}</div><div><label>지역</label>${sel('region',Object.entries(REG),b.region)}</div></div>
+   <div class="two"><div><label>주택 수 (살 때)</label>${sel('hb',[[1,'1채'],[2,'2채'],[3,'3채'],[4,'4채+']],b.hb)}</div><div><label>주택 수 (팔 때)</label>${sel('hs',[[1,'1채'],[2,'2채'],[3,'3채'],[4,'4채+']],b.hs)}</div></div>
+   <label>공사 범위</label><div class="chips uchips">${[[0,'공사 없음'],[300000,'간단 수리'],[600000,'부분 수리'],[1500000,'전체 리모델링']].map(([v,l])=>`<button type="button" class="chip${+b.perPy===v?' on':''}" data-perpy="${v}">${l}</button>`).join('')}${hist?`<button type="button" class="chip${+b.perPy===hist?' on':''}" data-perpy="${hist}">내 평균 ${won(hist)}/평</button>`:''}</div>
+   <div class="two">${inp('perPy',b.perPy,'평당 공사비 (전용 기준)',1)}${inp('months',b.months,'보유 기간 (개월)',0)}</div>
+   <div class="two">${inp('loan',b.loan,'대출금',1)}${inp('rate',b.rate,'금리 (%)',0)}</div>
+   <div class="two">${inp('mgmt',b.mgmt,'월 관리비·공과금',1)}${inp('buyFee',b.buyFee,'살 때 복비 (%)',0)}</div>`
+  :`<div class="two">${inp('remain',s.remain,'남은 예상 비용',1,'예: 3,000,000')}${inp('monthly',s.monthly,'월 보유비용 (이자·관리비)',1)}</div>`}
+  <div class="two">${inp('sellFee',s.sellFee,'팔 때 복비 (%)',0)}${inp('market',s.market,'주변 시세 (선택)',1)}</div>
+  <div class="simbox"><div class="row" style="justify-content:space-between;align-items:flex-end"><span class="sub">매도가</span><span class="sub" id="sim-c0"></span></div><div class="simprice" id="sim-price"></div>
+   <div id="sim-chart"></div><input type="range" id="sim-r" min="-10" max="80" step="1" value="${s.m}" aria-label="마진율">
+   <div class="row sub" style="justify-content:space-between;margin-top:4px"><span>마진 <b id="sim-m"></b></span><span id="sim-br"></span></div></div>
+  <div id="sim-out"></div></form>
+  <div class="acts" style="margin-top:16px">${s.mode==='proj'?'<button class="btn pri" data-simsave>계획 매도가로 저장</button>':'<button class="btn pri" data-simproj>이 조건으로 프로젝트 만들기</button>'}<button class="btn" data-close>닫기</button></div>
+  <p class="note">세금은 2026년 11월 세법 기준 추정치예요. 같은 해 다른 매도가 있으면 합산 기준으로 계산해요.</p>`);simUpdate(true)}
+function simRead(){const f=$('#sim');if(!f)return;const s=S.sim;f.querySelectorAll('[data-sim]').forEach(el=>{const n=el.name,v=el.tagName==='SELECT'?el.value:num(el.value);if(s.mode==='buy'&&!['sellFee','market','monthly','remain'].includes(n))s.b[n]=['type','region','lp'].includes(n)?el.value:v;else s[n]=v})}
+function simUpdate(full){const s=S.sim,c0=simCost0(),cur=simAt(simPrice(s.m)),r=cur.c,L=1+S.set.local/100;
+  $('#sim-price').textContent=won(cur.price)+'원';$('#sim-m').textContent=(s.m>0?'+':'')+s.m+'%';$('#sim-c0').textContent='예상 총비용 '+won(c0);
+  if(full||!S.simScan){const all=[];for(let m=-10;m<=80;m++){const z=simAt(simPrice(m));all.push({m,v:z.after,tx:z.c.taxable})}const pts=all.filter(x=>x.m%2===0);
+    const bs=[...S.set.brackets].sort((a,z)=>a[0]-z[0]).filter(x=>x[0]>0),ticks=[];for(const [l,rt] of bs){const f=all.find(x=>x.tx>=l);if(f&&f.m>-10)ticks.push({m:f.m,rt})}
+    S.simScan={pts,ticks,mk:s.market&&c0?Math.round((s.market/c0-1)*100):null}}
+  const {pts,ticks,mk}=S.simScan,W=300,H=70,mn=Math.min(0,...pts.map(p=>p.v)),mx=Math.max(...pts.map(p=>p.v),1),X=m=>(m+10)/90*W,Y=v=>H-6-(v-mn)/(mx-mn||1)*(H-12);
+  $('#sim-chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="simsvg" aria-hidden="true">${mn<0?`<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`:''}${ticks.map(t=>`<line x1="${X(t.m)}" x2="${X(t.m)}" y1="0" y2="${H}" stroke="var(--amber)" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"/>`).join('')}${mk!=null&&mk>=-10&&mk<=80?`<line x1="${X(mk)}" x2="${X(mk)}" y1="0" y2="${H}" stroke="var(--green)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`:''}<polyline points="${pts.map(p=>X(p.m)+','+Y(p.v)).join(' ')}" fill="none" stroke="var(--blue)" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${X(s.m)}" cy="${Y(cur.after)}" r="4" fill="var(--blue)"/></svg>
+   <div class="simlab">${ticks.map(t=>`<span style="left:${(t.m+10)/90*100}%">${t.rt}%</span>`).join('')}${mk!=null&&mk>=-10&&mk<=80?`<span class="mk" style="left:${(mk+10)/90*100}%">시세</span>`:''}</div>`;
+  const rt=r.taxable>0?bk(r.taxable).rate:0,nx=[...S.set.brackets].sort((a,z)=>a[0]-z[0]).find(x=>x[0]>r.taxable);
+  $('#sim-br').innerHTML=r.cmp?'<b style="color:var(--rose)">비교과세 적용</b>':r.taxable>0?`세율 ${Math.round(rt*100)}%${nx?` · ${nx[1]}%까지 ${won(nx[0]-r.taxable)}`:''}`:'과세 차익 없음';
+  const up=simAt(cur.price+1e6),keep=up.after-cur.after;
+  const msgs=[];if(cur.after<0)msgs.push(['r',`이 가격이면 세후 <b>${won(-cur.after)} 손해</b>예요`]);
+  if(keep<5e5)msgs.push(['a',`이 구간부터는 100만 원 올려도 세후로 <b>${won(keep)}원</b>밖에 안 남아요. 올린 금액의 절반 이상이 세금·복비로 나가요`]);
+  if(s.market){const dm=cur.price-s.market;if(dm>0){const base=simAt(Math.round(s.market/1e6)*1e6),gain=cur.after-base.after,mon=+s.monthly||0;msgs.push(['a',`시세보다 <b>${won(dm)} (${(dm/s.market*100).toFixed(1)}%)</b> 높아요. 세후 ${won(gain)} 더 남지만${mon?`, 팔리는 게 <b>${(gain/mon).toFixed(1)}개월</b> 이상 늦어지면 보유비용(월 ${won(mon)})으로 오히려 손해예요`:', 판매가 늦어지면 보유비용이 늘어요'}`])}else if(dm<0)msgs.push(['g',`시세보다 ${won(-dm)} 낮아요. 빨리 팔리는 대신 세후 이익이 줄어요`])}
+  for(const x of risks(cur.q).filter(x=>x.lv==='r'&&!/마감/.test(x.t)).slice(0,3))msgs.push(['r',`${x.t}${x.amt>1e4?` (+${won(x.amt)})`:''} — ${x.how}`]);
+  $('#sim-out').innerHTML=`<div class="stats" style="margin-top:12px"><div class="stat"><span>세전 이익</span><b>${won(r.pre)}</b></div><div class="stat"><span>예상 세금 · 실효 ${(cur.eff*100).toFixed(1)}%</span><b>${won(cur.tax)}</b></div><div class="stat hi"><span>세후 이익 · 수익률 ${pct(cur.roi)}</span><b>${won(cur.after)}</b></div></div>
+   <div class="sub" style="margin:10px 2px 0">100만 원 더 받으면 세후 <b>+${won(Math.max(0,keep))}</b>${cur.combined?' · 같은 해 다른 매도와 합산 기준':''}</div>
+   ${msgs.length?`<div class="card" style="margin-top:12px;padding:14px 16px">${msgs.map(([lv,t])=>`<div class="row" style="align-items:flex-start;padding:6px 0;font-size:14px"><i class="rdot ${lv}" style="margin-top:7px"></i><span>${t}</span></div>`).join('')}</div>`:''}`}
 function pcard(p){const c=calc(p),pr=progress(p),ok=c.after>=0,j=juneInfo(p);
   return `<button class="card pcard" data-open="${esc(p.id)}"><div class="row"><div class="ico">${icon('house')}</div><div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.type||'아파트')} · ${esc(p.status||'진행중')} · ${pr.label}</div>${(()=>{const n=risks(p).filter(x=>x.lv!=='g').length;return n?`<span class="wpill">세금 주의 ${n}</span>`:''})()}</div><div><div class="amt">${won(c.after)}</div><span class="pill ${ok?'up':'dn'}">${ok?'↗':'↘'} ${pct(c.roi)}</span></div></div><div class="bar"><i style="width:${pr.pct}%;background:${ok?'var(--green)':'var(--rose)'}"></i></div></button>`}
 
@@ -246,6 +310,7 @@ function detail(){const p=S.projects.find(x=>x.id===S.pid);if(!p){S.view='home';
   <div class="acts4"><button class="apill" data-addmat="${esc(p.id)}">+ 자재</button><button class="apill" data-addwork="${esc(p.id)}">+ 작업</button><button class="apill" data-addcost="${esc(p.id)}">+ 비용</button><button class="apill" data-editp="${esc(p.id)}">수정</button></div>
   <div class="card">${ring(parts(c),won(c.after),'세후 이익 · 수익률 '+pct(c.roi))}${legend(parts(c))}</div>
   ${riskCard(p)}
+  <button class="big" data-sim-open="${esc(p.id)}" style="margin-top:12px;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(20,25,35,.05)"><div class="ico">${icon('pct')}</div><span class="grow"><b>적정 매도가 정하기</b><small style="opacity:1;color:var(--mute)">게이지로 마진을 조절하면 세금까지 계산돼요</small></span>${icon('chev')}</button>
   <div class="sec">핵심 숫자</div>
   <div class="stats">${st('매도가'+(c.sold?'':' (계획)'),full(c.gross))}<button class="stat tap" data-costbd="${esc(p.id)}"><span>총 투입비 · 항목 보기 ›</span><b>${full(c.cost)}</b></button>${st('세전 이익',full(c.pre))}${st('과세 매매차익',full(c.taxable))}${st('예정신고 세액 (기본세율)',full(c.preTax))}${st('최종 소득세'+(c.cmp?' (비교과세)':''),full(c.tax))}${st(p.vat==='과세'?'부가세 · '+(c.vatIn?'매도가에 포함':'별도로 받음'):'부가세',p.vat==='과세'?full(c.vatAmt):'면세')}${st('보유세 (재산세·종부세)',full(c.hold))}${c.rent.inc?st('임대수입 (월세)',full(c.rent.inc)):''}${st('세후 이익',full(c.after),1)}</div>
   <div class="sec">세금 판단</div>
@@ -271,6 +336,7 @@ function costOne(id,armed){const c=S.costs.find(x=>x.id===id);if(!c)return;const
 function manage(){const ps=sorted(),common=S.costs.filter(c=>!c.pid).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   return `<h1>프로젝트 관리</h1>
   <button class="big" data-newp><div class="ico">${icon('house')}</div><span class="grow"><b>새 프로젝트 만들기</b><small>질문에 답하면 세금·수익이 계산돼요</small></span>${icon('chev')}</button>
+  <button class="big" data-buycheck style="margin-top:10px;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(20,25,35,.05)"><div class="ico">${icon('pct')}</div><span class="grow"><b>매입 검토</b><small style="opacity:1;color:var(--mute)">사기 전에 비용·세금·매도가 계산</small></span>${icon('chev')}</button>
   <div class="sec">전체 프로젝트 · ${ps.length}건</div>
   <div class="card">${ps.length?ps.map(p=>{const c=calc(p);return `<div class="li"><button class="lib grow" data-open="${esc(p.id)}"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.status||'진행중')} · ${esc(p.type||'아파트')} · 세후 ${won(c.after)}</div></button><button class="btn sm" data-editp="${esc(p.id)}">수정</button></div>`}).join(''):'<div class="sub">아직 없어요. 위에서 새 프로젝트를 만들어 보세요.</div>'}</div>
   <div class="sec">공통비용</div>
@@ -664,11 +730,13 @@ function cForm(pid,date,pre={}){S.form={k:'c',id:pre.id||null};openSheet(`<h2>${
   <p class="note" style="margin:12px 2px 0">필요경비: 팔 때 예정신고에서 빠지는 비용(취득세·법무사·복비·자재·공사) · 사업경비: 연말 종합소득세에서만 빠지는 비용(이자·기장료)</p>
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`)}
 
-document.addEventListener('input',e=>{const t=e.target;if(t.id==='p-ar'){const a=num(t.value),o=$('#p-o8'),hh=$('#p-ar-h');if(a&&o)o.value=a>85?'초과':'이하';if(hh)hh.textContent=a?'약 '+pyeong(a)+'평 · '+(a>85?'85㎡ 초과':'85㎡ 이하'):''}if(t.dataset&&t.dataset.ac&&document.activeElement===t)acUpdate(t);if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():'';if(t===chipFor)krShow(t)}
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.id==='sim-r'){const m=+t.value,old=S.sim.m;if(m!==old){S.sim.m=m;const tk=(S.simScan?.ticks||[]).some(x=>(old<x.m)!==(m<x.m));buzz(tk?[30]:6);simUpdate(false)}return}
+  if(t.dataset&&t.dataset.sim!==undefined&&t.closest('#sim')){setTimeout(()=>{simRead();S.simScan=null;simUpdate(true)},0)}if(t.id==='p-ar'){const a=num(t.value),o=$('#p-o8'),hh=$('#p-ar-h');if(a&&o)o.value=a>85?'초과':'이하';if(hh)hh.textContent=a?'약 '+pyeong(a)+'평 · '+(a>85?'85㎡ 초과':'85㎡ 이하'):''}if(t.dataset&&t.dataset.ac&&document.activeElement===t)acUpdate(t);if(t.closest&&t.closest('#wz'))setTimeout(wzHint,0);if(t.classList.contains('money')){const d=t.value.replace(/[^\d]/g,'');t.value=d?(+d).toLocaleString():'';if(t===chipFor)krShow(t)}
   if(t.id==='m-q'||t.id==='m-up')calcAmt();if(t.id==='m-n')matHint();if(t.id==='k-n')wkHint();if(t.closest&&t.closest('#wk,#wz')&&(t.closest('.wrow,.xrow'))){if(t.classList.contains('w-n')){const r=t.closest('.wrow').querySelector('.w-r');if(!r.value){const last=S.costs.filter(c=>c.workers).sort((a,b)=>String(b.date).localeCompare(String(a.date))).flatMap(c=>c.workers).find(w=>w.name===t.value.trim()&&+w.rate);if(last)r.value=(+last.rate).toLocaleString()}}wkTotal()}
   if(t.id==='m-search'){const q=t.value.trim().toLowerCase();document.querySelectorAll('details.mat').forEach(d=>d.style.display=!q||d.dataset.name.includes(q)?'':'none')}
   if(S.draft){if(t.dataset.dk)S.draft[t.dataset.dk]=num(t.value);if(t.dataset.bl)S.draft.brackets[+t.dataset.bl][0]=num(t.value);if(t.dataset.br)S.draft.brackets[+t.dataset.br][1]=num(t.value)}});
-document.addEventListener('change',e=>{if(e.target.id==='p-ty'){const v=$('#p-v');if(v&&(e.target.value==='상가'||e.target.value==='오피스텔'))v.value='과세'}if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';f.text().then(t=>{let d;try{d=JSON.parse(t)}catch(_){toast('백업 파일을 읽지 못했어요');return}
+document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.sim!==undefined&&e.target.tagName==='SELECT'){simRead();S.simScan=null;simUpdate(true)}if(e.target.id==='p-ty'){const v=$('#p-v');if(v&&(e.target.value==='상가'||e.target.value==='오피스텔'))v.value='과세'}if(e.target.id==='imp'&&e.target.files[0]){const f=e.target.files[0];e.target.value='';f.text().then(t=>{let d;try{d=JSON.parse(t)}catch(_){toast('백업 파일을 읽지 못했어요');return}
   if(!d||!Array.isArray(d.projects)){toast('Fixfolio 백업 파일이 아니에요');return}S.pending=d;
   openSheet(`<h2>백업 불러오기</h2><p class="sub">프로젝트 ${d.projects.length}건, 비용 ${(d.costs||[]).length}건이 들어 있어요${d.exportedAt?' ('+esc(String(d.exportedAt).slice(0,10))+' 백업)':''}. 지금 앱에 있는 데이터는 이 백업으로 바뀌어요.</p><div class="acts"><button class="btn pri" data-impok>불러오기</button><button class="btn" data-close>취소</button></div>`)})}if(e.target.id==='m-r'&&e.target.value==='없음'){const d=$('#m-e');if(d)d.value='불공제'}if(e.target.id==='c-c'){const d=$('#c-e');if(d&&CAT_DED[e.target.value])d.value=CAT_DED[e.target.value]}if(S.view==='tax'&&(e.target.dataset.bl||e.target.dataset.br))render()});
 document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==='wz'){wzNext(e.target,e.submitter);return}
@@ -712,8 +780,13 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
   else if(ds.unit){const u=$('#w-u');if(u)u.value=ds.unit;$('#w-up')?.focus()}
   else if(ds.again){const c=S.costs.find(x=>x.id===ds.again);if(c)wzStartM({pid:c.pid,item:c.item,unit:c.unit,unitPrice:+c.unitPrice||0,store:c.store,receipt:c.receipt,ded:c.ded},'date')}
   else if('close' in ds)closeSheet();
-  else if('fab' in ds){const pid=S.view==='detail'?S.pid:'';openSheet(`<h2>무엇을 기록할까요?</h2>${pid?`<p class="sub">${esc(pname(pid))}에 기록돼요</p>`:''}<div style="margin-top:8px">${[['addmat','box','자재 구매','수량 · 단가 · 구매처'],['addwork','tool','작업 · 인건비','인원 · 일당 · 기타 비용'],['addcost','coin','기타 비용','이자 · 관리비 · 수수료 등'],...(pid?[]:[['newp','house','새 프로젝트','집 한 채를 새로 시작']])].map(([k,ic,l,s])=>`<button class="qa" data-${k}="${k==='newp'?'':esc(pid)}"><span class="ico">${icon(ic)}</span><span class="grow"><b>${l}</b><small>${s}</small></span>${icon('chev',18)}</button>`).join('')}</div><button class="btn" data-close style="width:100%;margin-top:14px">닫기</button>`)}
+  else if('fab' in ds){const pid=S.view==='detail'?S.pid:'';openSheet(`<h2>무엇을 기록할까요?</h2>${pid?`<p class="sub">${esc(pname(pid))}에 기록돼요</p>`:''}<div style="margin-top:8px">${[['addmat','box','자재 구매','수량 · 단가 · 구매처'],['addwork','tool','작업 · 인건비','인원 · 일당 · 기타 비용'],['addcost','coin','기타 비용','이자 · 관리비 · 수수료 등'],...(pid?[]:[['newp','house','새 프로젝트','집 한 채를 새로 시작'],['buycheck','pct','매입 검토','사기 전에 비용·세금·매도가 계산']])].map(([k,ic,l,s])=>`<button class="qa" data-${k}="${k==='newp'?'':esc(pid)}"><span class="ico">${icon(ic)}</span><span class="grow"><b>${l}</b><small>${s}</small></span>${icon('chev',18)}</button>`).join('')}</div><button class="btn" data-close style="width:100%;margin-top:14px">닫기</button>`)}
   else if(ds.cost){costOne(ds.cost)}
+  else if(ds.simOpen){simOpen('proj',ds.simOpen)}
+  else if('buycheck' in ds){simOpen('buy')}
+  else if(ds.perpy!==undefined){S.sim.b.perPy=+ds.perpy;simRender()}
+  else if('simsave' in ds){const p=S.projects.find(x=>x.id===S.sim.pid),pr=simPrice(S.sim.m);if(p){const {id,...d}=p;d.planSellPrice=pr;if(await put('projects',id,d)){closeSheet();toast('계획 매도가를 '+won(pr)+'원으로 저장했어요')}}}
+  else if('simproj' in ds){const p=simProj(),pr=simPrice(S.sim.m),{id,...d}=p;d.planSellPrice=pr;d.name='새 프로젝트 ('+won(d.buyPrice)+')';if(await put('projects',null,d)){closeSheet();S.view='manage';render();toast('프로젝트를 만들었어요. 이름은 수정에서 바꾸세요')}}
   else if(ds.cedit){const c=S.costs.find(x=>x.id===ds.cedit);if(c){if(c.kind==='work')wForm(c.pid,JSON.parse(JSON.stringify(c)));else if(c.cat==='자재비')mForm(c.pid,{...c});else cForm(c.pid,c.date,{...c})}}
   else if(ds.cdel){if(S.armed!==ds.cdel){S.armed=ds.cdel;costOne(ds.cdel,1);return}S.armed=null;closeSheet();await del('costs',ds.cdel);toast('삭제했어요')}
   else if(ds.delcost){if(S.armed!==ds.delcost){S.armed=ds.delcost;render();return}S.armed=null;await del('costs',ds.delcost);toast('삭제했어요')}
