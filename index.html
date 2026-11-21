@@ -93,6 +93,11 @@ details.bd summary{list-style:none;cursor:pointer}details.bd summary::-webkit-de
 .aci{display:flex;justify-content:space-between;gap:10px;width:100%;border:0;background:none;font:inherit;font-size:15px;color:var(--ink);padding:11px 14px;min-height:46px;text-align:left;cursor:pointer}.aci+.aci{border-top:1px solid var(--line)}.aci.hi{background:var(--soft)}.aci b{color:var(--blue);font-weight:700}.aci small{color:var(--mute);font-size:12px;white-space:nowrap;align-self:center;overflow:hidden;text-overflow:ellipsis;max-width:55%}
 .lrow{display:flex;justify-content:space-between;align-items:center;margin:12px 2px 6px}.lrow label{margin:0}.dqb{border:1px solid var(--line);background:var(--card);border-radius:99px;font:inherit;font-size:12px;padding:0 10px;margin-left:4px;color:var(--ink);cursor:pointer;min-height:28px}
 .acts3{display:grid;grid-template-columns:1fr 1.3fr 52px;gap:8px;margin-top:20px}
+.fab{position:fixed;right:max(18px,calc(50% - 242px));bottom:calc(92px + env(safe-area-inset-bottom));z-index:6;border:0;border-radius:99px;background:var(--blue);color:#fff;font:inherit;font-weight:700;font-size:16px;padding:0 22px 0 16px;min-height:56px;display:flex;align-items:center;gap:6px;box-shadow:0 10px 24px rgba(40,70,140,.32);cursor:pointer}
+.app{padding-bottom:calc(180px + env(safe-area-inset-bottom))}
+.qa{display:flex;align-items:center;gap:14px;width:100%;border:0;background:var(--soft);border-radius:18px;padding:14px;margin-top:10px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;min-height:68px}.qa b{display:block;font-size:16px}.qa small{color:var(--mute);font-size:13px}.qa .ico{background:var(--card)}
+.acts4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:-6px 0 16px}.apill{border:0;border-radius:14px;background:var(--card);font:inherit;font-size:14px;font-weight:600;min-height:46px;color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(20,25,35,.05)}.apill:first-child,.apill:nth-child(2){color:var(--blue)}
+.lib{width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;padding-left:0;padding-right:0}button.li{border-top:1px solid var(--line)}button.li:first-child{border-top:0}.chev{color:var(--mute);display:flex}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 .note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
@@ -110,6 +115,7 @@ input,select{width:100%;font:inherit;font-size:16px;padding:11px 14px;border-rad
 <body>
 <main class="app" id="app"><div class="empty">불러오는 중…</div></main>
 <nav class="tabs" id="tabs" aria-label="메뉴"></nav>
+<button class="fab" id="fab" data-fab aria-label="기록하기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>기록</button>
 <div class="sheet" id="sheet"><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" role="status"></div>
 <script>
@@ -196,11 +202,12 @@ function pcard(p){const c=calc(p),pr=progress(p),ok=c.after>=0,j=juneInfo(p);
 function home(){const ps=sorted(),cs=ps.map(calc),T=k=>cs.reduce((a,c)=>a+c[k],0);
   const agg={buy:T('buy'),need:T('need'),biz:T('biz'),non:T('non'),tax:T('tax'),vatIn:T('vatIn'),after:T('after')},cost=T('cost');
   return `<h1>Fixfolio</h1>
-  <button class="big" data-go="manage"><div class="ico">${icon('grid')}</div><span class="grow"><b>프로젝트 관리</b><small>새 프로젝트 · 비용 기록 · 수정</small></span>${icon('chev')}</button>
+  <button class="big" data-go="manage"><div class="ico">${icon('grid')}</div><span class="grow"><b>프로젝트 관리</b><small>새 프로젝트 · 수정 · 백업</small></span>${icon('chev')}</button>
   <div class="card" style="margin-top:14px">${ring(parts(agg),won(agg.after),'세후 예상 이익 · '+ps.length+'건')}${legend(parts(agg))}<div class="sub" style="text-align:center;margin-top:4px">총 투입 ${won(cost)} · 평균 수익률 ${cost?pct(agg.after/cost):'–'}</div></div>
   ${(()=>{const r=ps.filter(p=>juneInfo(p)?.risk);return r.length?`<div class="alert"><b>재산세 주의 ${r.length}건</b>6월 1일에 갖고 있을 예정인 프로젝트예요. 6월 1일까지 잔금을 받으면 그해 재산세가 안 나와요.</div>`:''})()}
   <div class="sec">프로젝트별</div>
-  <div class="list">${ps.length?ps.map(pcard).join(''):`<div class="card empty">아직 프로젝트가 없어요.<br>위의 <b>프로젝트 관리</b>에서 추가해 보세요.</div>`}</div>`}
+  <div class="list">${ps.length?ps.map(pcard).join(''):`<div class="card empty">아직 프로젝트가 없어요.<br><button class="btn pri" data-newp style="margin-top:12px">새 프로젝트 만들기</button></div>`}</div>
+  ${(()=>{const r=[...S.costs].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5);return r.length?`<div class="sec">최근 기록</div><div class="card">${r.map(costRow).join('')}</div><button class="btn" data-go="site" style="width:100%;margin-top:10px">현장 기록에서 전체 보기</button>`:''})()}`}
 
 function detail(){const p=S.projects.find(x=>x.id===S.pid);if(!p){S.view='home';return home()}
   const c=calc(p),pr=progress(p),byCat=CATS.map(k=>({k,v:c.cs.filter(x=>x.cat===k).reduce((a,x)=>a+(+x.amount||0),0)})).filter(x=>x.v),mx=Math.max(1,...byCat.map(x=>x.v));
@@ -208,6 +215,7 @@ function detail(){const p=S.projects.find(x=>x.id===S.pid);if(!p){S.view='home';
   const pv=personal(p,c),held=p.buyDate?dd(day(p.buyDate),p.sellDate?day(p.sellDate):today()):null,jn=june(p),dl=deadlines(p);
   return `<button class="back" data-go="home">${icon('back',20)} 홈</button>
   <h1 style="margin-top:0">${esc(p.name)}</h1>
+  <div class="acts4"><button class="apill" data-addmat="${esc(p.id)}">+ 자재</button><button class="apill" data-addwork="${esc(p.id)}">+ 작업</button><button class="apill" data-addcost="${esc(p.id)}">+ 비용</button><button class="apill" data-editp="${esc(p.id)}">수정</button></div>
   <div class="card">${ring(parts(c),won(c.after),'세후 이익 · 수익률 '+pct(c.roi))}${legend(parts(c))}</div>
   ${(()=>{const j=juneInfo(p);if(!j)return'';if(j.risk)return `<div class="alert"><b>${j.year}년 재산세가 나올 예정이에요</b>${j.plan?'계획 매도일이 6월 1일 이후예요. ':'매도 계획일이 없어요. '}${j.dl}까지 잔금을 받으면 피할 수 있어요 · D-${j.left}</div>`;
     return `<div class="alert ok"><b>${j.year}년 재산세 없음</b>계획대로 6월 1일 전에 팔면 안 나와요 · 잔금 마감 ${j.dl} (D-${j.left})</div>`})()}
@@ -225,24 +233,25 @@ function detail(){const p=S.projects.find(x=>x.id===S.pid);if(!p){S.view='home';
   <div class="sec">비용 구성</div>
   <div class="card">${byCat.length?byCat.map(x=>`<div class="cat"><div class="row"><span>${x.k}</span><b>${won(x.v)}</b></div><div class="bar"><i style="width:${x.v/mx*100}%;background:var(--amber)"></i></div></div>`).join(''):'<div class="sub">기록된 비용이 없어요.</div>'}</div>
   <div class="sec">비용 내역</div>
-  <div class="card">${c.cs.length?[...c.cs].sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(costRow).join(''):'<div class="sub">비용 추가로 기록해 보세요.</div>'}</div>
-  <div class="two" style="margin-top:16px"><button class="btn pri" data-addmat="${esc(p.id)}">자재 추가</button><button class="btn pri" data-addwork="${esc(p.id)}">작업 기록</button></div>
-  <div class="two" style="margin-top:10px"><button class="btn" data-addcost="${esc(p.id)}">비용 추가</button><button class="btn" data-editp="${esc(p.id)}">프로젝트 수정</button></div>`}
-const costRow=x=>`<div class="li"><div class="grow"><div class="name">${esc(x.item||x.cat)}</div><div class="sub">${esc(x.date||'')} · ${x.kind==='work'?`${esc(pname(x.pid))} · 인원 ${(x.workers||[]).reduce((s,w)=>s+(+w.count||1),0)}명 · 인건비 ${won(labor(x))}${extraSum(x)?' · 기타 '+won(extraSum(x)):''}`:x.qty?`${(+x.qty).toLocaleString()}${esc(x.unit||'')} × ${(+x.unitPrice||0).toLocaleString()}원${x.store?' · '+esc(x.store):''}`:esc(x.cat)} · ${esc(x.ded)}</div></div><b style="white-space:nowrap">${won(x.amount)}</b><button class="btn sm${S.armed===x.id?' warn':''}" data-delcost="${esc(x.id)}">${S.armed===x.id?'삭제 확인':'삭제'}</button></div>`;
+  <div class="card">${c.cs.length?[...c.cs].sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(costRow).join(''):'<div class="sub">위의 + 자재 · + 작업 · + 비용으로 기록해 보세요.</div>'}</div>
+  `}
+const costRow=x=>`<button class="li lib" data-cost="${esc(x.id)}"><div class="grow"><div class="name">${esc(x.item||x.cat)}</div><div class="sub">${esc(x.date||'')} · ${x.kind==='work'?`${esc(pname(x.pid))} · 인원 ${(x.workers||[]).reduce((s,w)=>s+(+w.count||1),0)}명 · 인건비 ${won(labor(x))}${extraSum(x)?' · 기타 '+won(extraSum(x)):''}`:x.qty?`${(+x.qty).toLocaleString()}${esc(x.unit||'')} × ${(+x.unitPrice||0).toLocaleString()}원${x.store?' · '+esc(x.store):''}`:esc(x.cat)} · ${esc(x.ded)}</div></div><b style="white-space:nowrap">${won(x.amount)}</b><span class="chev">${icon('chev',16)}</span></button>`;
+function costOne(id,armed){const c=S.costs.find(x=>x.id===id);if(!c)return;const W=c.kind==='work';
+  openSheet(`<h2>${esc(c.item||c.cat)}</h2><p class="sub">${esc(c.date||'')} · ${esc(pname(c.pid))}</p><div style="margin-top:10px">${kvs([['구분',esc(c.cat)],['금액',full(c.amount)],c.qty?['수량 × 단가',`${(+c.qty).toLocaleString()}${esc(c.unit||'')} × ${(+c.unitPrice||0).toLocaleString()}원`]:null,c.store?['구매처',esc(c.store)]:null,...(W?(c.workers||[]).map(w=>[esc(w.name||'인원'),`${(+w.rate).toLocaleString()} × ${w.count}명 × ${w.days}일`]):[]),...(W?(c.extras||[]).map(x=>[esc(x.name||'기타'),full(x.amount)]):[]),c.receipt?['증빙',esc(c.receipt)]:null,['공제',esc(c.ded)],c.memo?['메모',esc(c.memo)]:null])}</div>
+  <div class="acts"><button class="btn pri" data-cedit="${esc(id)}">수정</button><button class="btn" data-close>닫기</button></div>
+  <div class="two" style="margin-top:10px">${W?`<button class="btn" data-wagain="${esc(id)}">같은 작업 다시</button>`:c.cat==='자재비'?`<button class="btn" data-again="${esc(id)}">같은 자재 다시</button>`:'<span></span>'}<button class="btn warn" data-cdel="${esc(id)}">${armed?'한 번 더 누르면 삭제':'삭제'}</button></div>`)}
 
 function manage(){const ps=sorted(),common=S.costs.filter(c=>!c.pid).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   return `<h1>프로젝트 관리</h1>
-  <button class="btn" data-example style="width:100%;margin-bottom:10px">예시 프로젝트 넣기 (자재·작업·임대 포함)</button>
-  <div class="two"><button class="btn pri" data-newp>새 프로젝트</button><button class="btn" data-addcost="">비용 기록</button></div>
-  <button class="btn" data-addmat="" style="width:100%;margin-top:10px">자재 구매 기록</button>
-  <div class="sec">전체 프로젝트</div>
-  <div class="card">${ps.length?ps.map(p=>`<div class="li"><div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.status||'진행중')} · 매입 ${p.buyDate||'–'}</div></div><button class="btn sm" data-editp="${esc(p.id)}">수정</button><button class="btn sm" data-open="${esc(p.id)}">보기</button></div>`).join(''):'<div class="sub">아직 없어요. 새 프로젝트를 추가해 보세요.</div>'}</div>
-  <div class="sec">데이터 백업</div>
-  <div class="card"><div class="sub">데이터는 이 폰에만 저장돼요. 폰을 바꾸거나 앱을 지우기 전에 꼭 백업 파일을 저장하세요.${(()=>{const b=lastBackup();return b?' · 마지막 백업 '+b.slice(0,10):' · 아직 백업 안 함'})()}</div>
-  <div class="two" style="margin-top:12px"><button class="btn pri" data-export>백업 저장</button><button class="btn" data-import>백업 불러오기</button></div>
-  <input type="file" id="imp" accept="application/json,.json" hidden></div>
+  <button class="big" data-newp><div class="ico">${icon('house')}</div><span class="grow"><b>새 프로젝트 만들기</b><small>질문에 답하면 세금·수익이 계산돼요</small></span>${icon('chev')}</button>
+  <div class="sec">전체 프로젝트 · ${ps.length}건</div>
+  <div class="card">${ps.length?ps.map(p=>{const c=calc(p);return `<div class="li"><button class="lib grow" data-open="${esc(p.id)}"><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.status||'진행중')} · ${esc(p.type||'아파트')} · 세후 ${won(c.after)}</div></button><button class="btn sm" data-editp="${esc(p.id)}">수정</button></div>`}).join(''):'<div class="sub">아직 없어요. 위에서 새 프로젝트를 만들어 보세요.</div>'}</div>
   <div class="sec">공통비용</div>
-  <div class="card">${common.length?common.map(costRow).join(''):'<div class="sub">여러 건에 같이 드는 비용(기장료 등)은 프로젝트를 "공통"으로 두고 기록하세요.</div>'}</div>`}
+  <div class="card">${common.length?common.map(costRow).join(''):'<div class="sub">여러 건에 같이 드는 비용(기장료 등)은 기록할 때 프로젝트를 "공통"으로 고르세요.</div>'}</div>
+  <div class="sec">데이터 백업</div>
+  <div class="card"><div class="sub">데이터는 이 폰에만 저장돼요. 폰을 바꾸거나 앱을 지우기 전에 꼭 백업하세요.${(()=>{const b=lastBackup();return b?' · 마지막 백업 '+b.slice(0,10):' · <b style="color:var(--rose)">아직 백업 안 함</b>'})()}</div>
+  <div class="two" style="margin-top:12px"><button class="btn pri" data-export>백업 저장</button><button class="btn" data-import>백업 불러오기</button></div>
+  <input type="file" id="imp" accept="application/json,.json" hidden></div>`}
 
 function annual(y){const inY=s=>s&&+String(s).slice(0,4)===y;const sold=S.projects.filter(p=>inY(p.sellDate)&&(+p.sellPrice||0)>0).map(p=>({p,c:calc(p)}));
   const sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);const biz=sum(S.costs.filter(c=>c.ded==='사업경비'&&inY(c.date)),c=>+c.amount||0),common=sum(S.costs.filter(c=>!c.pid&&inY(c.date)),c=>+c.amount||0);
@@ -293,8 +302,8 @@ function spark(pts){if(pts.length<2)return'';const W=300,H=46,ps=pts.map(p=>p.v)
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${xy.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--blue)" stroke-width="2" vector-effect="non-scaling-stroke"/>${xy.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="var(--blue)"/>`).join('')}</svg><div class="row sub" style="justify-content:space-between;font-size:12px"><span>${esc(pts[0].d)}</span><span>${esc(pts[pts.length-1].d)}</span></div>`}
 function siteTabs(){const t=S.stab||'cal';return `<div class="seg">${[['cal','캘린더'],['mat','자재 단가'],['work','작업']].map(([k,l])=>`<button class="${t===k?'on':''}" data-stab="${k}">${l}</button>`).join('')}</div>`}
 function sitev(){const t=S.stab||'cal';
-  return `<h1>현장 기록</h1><div class="two"><button class="btn pri" data-addmat="">${icon('box',18)} 자재 기록</button><button class="btn pri" data-addwork="">${icon('tool',18)} 작업 기록</button></div>
-  <div style="margin-top:14px">${siteTabs()}</div>${t==='cal'?calv():t==='mat'?matList():workList()}`}
+  return `<h1>현장 기록</h1>
+  ${siteTabs()}${t==='cal'?calv():t==='mat'?matList():workList()}`}
 function calv(){const now=new Date(),c=S.cal||(S.cal={y:now.getFullYear(),m:now.getMonth(),sel:iso(now)}),first=new Date(c.y,c.m,1),days=new Date(c.y,c.m+1,0).getDate(),pre=first.getDay();
   const ym=`${c.y}-${String(c.m+1).padStart(2,'0')}`,ev={};
   for(const x of S.costs)if(String(x.date).startsWith(ym)){const k=x.date;(ev[k]??=new Set()).add(x.kind==='work'?'w':x.cat==='자재비'?'m':'o')}
@@ -330,8 +339,8 @@ function workList(){const w=works();
     <button class="btn sm" data-wagain="${esc(x.a[0].id)}" style="width:100%;margin-top:10px">같은 작업 다시 기록</button></details>`}).join(''):`<div class="card empty">아직 작업 기록이 없어요.<br>작업 기록으로 인원·인건비·기타 비용을 남겨 보세요.</div>`}</div>`}
 const wrow=(w={})=>`<div class="wrow">${acInput({cls:'w-n',ac:'person',value:w.name,ph:'이름·역할'})}<input class="w-r money" inputmode="numeric" placeholder="일당" value="${w.rate?(+w.rate).toLocaleString():''}"><input class="w-c" inputmode="numeric" value="${w.count||1}" aria-label="인원"><input class="w-d" inputmode="decimal" value="${w.days||1}" aria-label="일수"><button type="button" class="x" data-rowdel aria-label="삭제">×</button></div>`;
 const xrow=(x={})=>`<div class="xrow">${acInput({cls:'x-n',ac:'extra',value:x.name,ph:'항목 (예: 식대)'})}<input class="x-a money" inputmode="numeric" placeholder="금액" value="${x.amount?(+x.amount).toLocaleString():''}"><button type="button" class="x" data-rowdel aria-label="삭제">×</button></div>`;
-function wForm(pid,pre={}){S.form={k:'wk'};const P=pre.pid??(pid||S.lastPid||'');
-  openSheet(`<h2>작업 기록</h2><form id="wk">
+function wForm(pid,pre={}){S.form={k:'wk',id:pre.id||null};const P=pre.pid??(pid||S.lastPid||'');
+  openSheet(`<h2>${pre.id?'작업 수정':'작업 기록'}</h2><form id="wk">
   <div class="two"><div>${projSel('k-p',P)}</div><div>${dateField('k-d','date',pre.date)}</div></div>
   <label for="k-n">작업</label>${acInput({id:'k-n',name:'item',ac:'work',value:pre.item,ph:'예: 도배 (초성 ㄷㅂ도 돼요)',req:1})}
   <div id="k-hint" class="whint" style="margin-top:8px"></div>
@@ -390,17 +399,17 @@ document.addEventListener('keydown',e=>{const t=e.target;if(!t.dataset||!t.datas
 for(const ev of['pointerdown','mousedown'])document.addEventListener(ev,e=>{if(e.target.closest&&e.target.closest('.aci,.ghost'))e.preventDefault()});
 const dateField=(id,name,val)=>`<div class="lrow"><label for="${id}">날짜</label><span><button type="button" class="dqb" data-dset="0" data-for="${id}">오늘</button><button type="button" class="dqb" data-dset="-1" data-for="${id}">어제</button></span></div><input id="${id}" type="date" name="${name}" value="${val||iso(new Date())}">`;
 const projSel=(id,pid,common='공통')=>`<label for="${id}">프로젝트</label><select id="${id}" name="pid"><option value="">${common}</option>${sorted().map(p=>`<option value="${esc(p.id)}" ${p.id===pid?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
-function mForm(pid,pre={}){S.form={k:'m'};const m=v=>v?(+v).toLocaleString():'',P=pre.pid??(pid||S.lastPid||'');
-  openSheet(`<h2>자재 구매 기록</h2><form id="f">
+function mForm(pid,pre={}){S.form={k:'m',id:pre.id||null};const m=v=>v?(+v).toLocaleString():'',P=pre.pid??(pid||S.lastPid||'');
+  openSheet(`<h2>${pre.id?'자재 수정':'자재 구매 기록'}</h2><form id="f">
   <div class="two"><div>${projSel('m-p',P)}</div><div>${dateField('m-d','date',pre.date)}</div></div>
   <label for="m-n">자재 이름</label>${acInput({id:'m-n',name:'item',ac:'mat',value:pre.item,ph:'예: 실크 벽지 (초성 ㅅㅋ도 돼요)',req:1,next:'m-q'})}
   <div id="m-hint" class="sub" style="margin:6px 2px 0;min-height:1em"></div>
   <div class="three"><div><label for="m-q">수량</label><input id="m-q" name="qty" inputmode="decimal" value="${pre.qty||''}"></div><div><label for="m-u">단위</label>${acInput({id:'m-u',name:'unit',ac:'unit',value:pre.unit,ph:'개',next:'m-up'})}</div><div><label for="m-up">단가</label><input id="m-up" class="money" name="unitPrice" inputmode="numeric" value="${m(pre.unitPrice)}"></div></div>
-  <label for="m-a">금액 (자동 계산 · 수정 가능)</label><input id="m-a" class="money" name="amount" inputmode="numeric" required>
+  <label for="m-a">금액 (자동 계산 · 수정 가능)</label><input id="m-a" class="money" name="amount" inputmode="numeric" required value="${m(pre.amount)}">
   <label for="m-s">구매처</label>${acInput({id:'m-s',name:'store',ac:'store',value:pre.store,ph:'예: ○○건재'})}
   <div class="two"><div><label for="m-r">증빙</label><select id="m-r" name="receipt">${['카드','현금영수증','세금계산서','없음'].map(r=>`<option ${r===(pre.receipt||'카드')?'selected':''}>${r}</option>`).join('')}</select></div><div><label for="m-e">공제</label><select id="m-e" name="ded">${DEDS.map(c=>`<option ${c===(pre.ded||'필요경비')?'selected':''}>${c}</option>`).join('')}</select></div></div>
   <p class="note" style="margin:12px 2px 0">영수증 한 장에 여러 자재가 있으면 <b>저장 후 다음 자재</b>를 누르세요. 프로젝트·날짜·구매처가 그대로 남아요.</p>
-  <div class="acts3"><button class="btn pri" type="submit">저장</button><button class="btn" type="submit" data-more>저장 후 다음 자재</button><button class="btn" type="button" data-close aria-label="취소">✕</button></div></form>`);
+  <div class="acts3"><button class="btn pri" type="submit">저장</button>${pre.id?'<span></span>':'<button class="btn" type="submit" data-more>저장 후 다음 자재</button>'}<button class="btn" type="button" data-close aria-label="취소">✕</button></div></form>`);
   matHint();calcAmt();if(!pre.item)setTimeout(()=>$('#m-n')?.focus(),60)}
 function matHint(){const n=$('#m-n')?.value.trim(),h=$('#m-hint');if(!h)return;const x=n&&mats().find(m=>m.n===n);
   if(!x||!x.last){h.textContent=n?'처음 기록하는 자재예요':'';const e=$('#m-e');if(e&&n)e.value=MAT_BIZ.includes(n)?'사업경비':'필요경비';return}
@@ -408,7 +417,7 @@ function matHint(){const n=$('#m-n')?.value.trim(),h=$('#m-hint');if(!h)return;c
   const u=$('#m-u'),s=$('#m-s'),p=$('#m-up');if(u&&!u.value)u.value=l.unit||'';if(s&&!s.value)s.value=l.store||'';if(p&&!p.value){p.value=(+l.unitPrice).toLocaleString();calcAmt()}}
 function calcAmt(){const q=num($('#m-q')?.value),p=num($('#m-up')?.value),a=$('#m-a');if(a&&q&&p)a.value=Math.round(q*p).toLocaleString()}
 
-function render(){const v=S.view;
+function render(){const v=S.view;const fb=$('#fab');if(fb)fb.style.display=['tax','year'].includes(v)?'none':'';
   $('#tabs').innerHTML=[['home','house','홈'],['manage','grid','관리'],['site','box','현장'],['year','chart','연간'],['tax','pct','세율']].map(([k,ic,l])=>`<button class="${(v===k||(v==='detail'&&k==='home'))?'on':''}" data-go="${k}">${icon(ic)}<span>${l}</span></button>`).join('');
   const ban='';
   $('#app').innerHTML=S.mode==='loading'?'<div class="empty">불러오는 중…</div>':ban+({home,detail,manage,site:sitev,year,tax:taxv}[v]||home)()}
@@ -570,11 +579,11 @@ function pForm(p={}){S.form={k:'p',id:p.id||null};const m=v=>v?(+v).toLocaleStri
   <p class="note" style="margin:10px 2px 0">이 집 포함 주택 수는 아파트·빌라·주거용 오피스텔을 세요. 85㎡ 이하 주택은 보통 면세, 85㎡ 초과 주택과 오피스텔·상가는 건물분이 과세예요.</p>
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div>
   ${p.id?`<button class="btn warn" type="button" data-delp="${esc(p.id)}" style="width:100%;margin-top:10px">프로젝트 삭제</button>`:''}</form>`)}
-function cForm(pid,date){S.form={k:'c'};openSheet(`<h2>비용 기록</h2><form id="f">
+function cForm(pid,date,pre={}){S.form={k:'c',id:pre.id||null};openSheet(`<h2>${pre.id?'비용 수정':'비용 기록'}</h2><form id="f">
   <div class="two"><div>${projSel('c-p',pid||S.lastPid||'','공통 (여러 건에 같이)')}</div><div>${dateField('c-d','date',date)}</div></div>
-  <label for="c-i">항목</label>${acInput({id:'c-i',name:'item',ac:'cost',ph:'예: 대출 이자 11월',next:'c-a'})}
-  <label for="c-a">금액</label><input id="c-a" class="money" inputmode="numeric" name="amount" required>
-  <div class="two"><div><label for="c-c">구분</label><select id="c-c" name="cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div><div><label for="c-e">공제</label><select id="c-e" name="ded">${DEDS.map(c=>`<option>${c}</option>`).join('')}</select></div></div>
+  <label for="c-i">항목</label>${acInput({id:'c-i',name:'item',ac:'cost',value:pre.item,ph:'예: 대출 이자 11월',next:'c-a'})}
+  <label for="c-a">금액</label><input id="c-a" class="money" inputmode="numeric" name="amount" required value="${pre.amount?(+pre.amount).toLocaleString():''}">
+  <div class="two"><div><label for="c-c">구분</label><select id="c-c" name="cat">${CATS.map(c=>`<option ${c===pre.cat?'selected':''}>${c}</option>`).join('')}</select></div><div><label for="c-e">공제</label><select id="c-e" name="ded">${DEDS.map(c=>`<option ${c===pre.ded?'selected':''}>${c}</option>`).join('')}</select></div></div>
   <p class="note" style="margin:12px 2px 0">필요경비: 팔 때 예정신고에서 빠지는 비용(취득세·법무사·복비·자재·공사) · 사업경비: 연말 종합소득세에서만 빠지는 비용(이자·기장료)</p>
   <div class="acts"><button class="btn pri" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`)}
 
@@ -589,12 +598,12 @@ document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id==
   if(e.target.id==='wk'){const f=e.target,fd=Object.fromEntries(new FormData(f));const workers=[...f.querySelectorAll('.wrow')].map(r=>({name:r.querySelector('.w-n').value.trim(),rate:num(r.querySelector('.w-r').value),count:num(r.querySelector('.w-c').value)||1,days:num(r.querySelector('.w-d').value)||1})).filter(w=>w.name||w.rate);
     const extras=[...f.querySelectorAll('.xrow')].map(r=>({name:r.querySelector('.x-n').value.trim(),amount:num(r.querySelector('.x-a').value)})).filter(x=>x.amount);
     const d={kind:'work',pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'공사·인건비',workers,extras,amount:wkTotal(),receipt:fd.receipt,ded:fd.receipt==='현금·증빙 없음'?'불공제':fd.ded,memo:fd.memo.trim()};
-    if(!d.amount){toast('일당이나 기타 비용을 넣어 주세요');return}S.lastPid=fd.pid;if(await put('costs',null,d)){closeSheet();toast('작업을 기록했어요')}return}const fd=Object.fromEntries(new FormData(e.target));if(!S.form)return;
+    if(!d.amount){toast('일당이나 기타 비용을 넣어 주세요');return}S.lastPid=fd.pid;if(await put('costs',S.form&&S.form.id||null,d)){closeSheet();toast(S.form&&S.form.id?'수정했어요':'작업을 기록했어요')}return}const fd=Object.fromEntries(new FormData(e.target));if(!S.form)return;
   if(S.form.k==='p'){const d={name:fd.name.trim(),status:fd.status,buyDate:fd.buyDate,buyPrice:num(fd.buyPrice),planSellDate:fd.planSellDate,planSellPrice:num(fd.planSellPrice),sellDate:fd.sellDate,sellPrice:num(fd.sellPrice),lt:num(fd.lt),region:fd.region,housesBuy:Math.max(1,num(fd.housesBuy)),housesSell:Math.max(1,num(fd.housesSell)),over85:fd.over85,lowPrice:fd.lowPrice,type:fd.type,rentType:fd.rentType,deposit:num(fd.deposit),monthly:num(fd.monthly),rentStart:fd.rentStart,rentEnd:fd.rentEnd,vat:fd.vat,vatBase:num(fd.vatBase),vatIncl:fd.vatIncl};
     if(d.sellDate&&d.sellPrice&&d.status==='진행중')d.status='완료';if(await put('projects',S.form.id,d)){closeSheet();toast('저장했어요')}}
   else if(S.form.k==='m'){const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:'자재비',store:fd.store.trim(),qty:num(fd.qty),unit:fd.unit.trim(),unitPrice:num(fd.unitPrice),amount:num(fd.amount),receipt:fd.receipt,ded:fd.ded};
-    if(!d.amount){toast('금액이나 수량·단가를 넣어 주세요');return}S.lastPid=fd.pid;if(await put('costs',null,d)){if(e.submitter&&'more' in e.submitter.dataset){mForm(fd.pid,{pid:fd.pid,date:fd.date,store:d.store,receipt:fd.receipt});toast(d.item+' 저장 · 다음 자재를 넣으세요')}else{closeSheet();toast('자재를 기록했어요')}}}
-  else{const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:fd.cat,amount:num(fd.amount),ded:fd.ded};if(!d.amount){toast('금액을 넣어 주세요');return}S.lastPid=fd.pid;if(await put('costs',null,d)){closeSheet();toast('비용을 기록했어요')}}});
+    if(!d.amount){toast('금액이나 수량·단가를 넣어 주세요');return}S.lastPid=fd.pid;const eid=S.form.id;if(await put('costs',eid||null,d)){if(eid){closeSheet();toast('수정했어요')}else if(e.submitter&&'more' in e.submitter.dataset){mForm(fd.pid,{pid:fd.pid,date:fd.date,store:d.store,receipt:fd.receipt});toast(d.item+' 저장 · 다음 자재를 넣으세요')}else{closeSheet();toast('자재를 기록했어요')}}}
+  else{const d={pid:fd.pid,date:fd.date,item:fd.item.trim(),cat:fd.cat,amount:num(fd.amount),ded:fd.ded};if(!d.amount){toast('금액을 넣어 주세요');return}S.lastPid=fd.pid;const eid=S.form.id;if(await put('costs',eid||null,d)){closeSheet();toast(eid?'수정했어요':'비용을 기록했어요')}}});
 document.addEventListener('click',async e=>{const t=e.target.closest('button,[data-open]');if(e.target.id==='sheet'){closeSheet();return}if(!t)return;const ds=t.dataset;
   if(ds.go){S.view=ds.go;S.armed=null;if(ds.go!=='tax')S.draft=null;render();scrollTo(0,0)}
   else if(ds.open){S.pid=ds.open;S.view='detail';closeSheet();render();scrollTo(0,0)}
@@ -623,6 +632,10 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,[da
   else if(ds.unit){const u=$('#w-u');if(u)u.value=ds.unit;$('#w-up')?.focus()}
   else if(ds.again){const c=S.costs.find(x=>x.id===ds.again);if(c)wzStartM({pid:c.pid,item:c.item,unit:c.unit,unitPrice:+c.unitPrice||0,store:c.store,receipt:c.receipt,ded:c.ded},'date')}
   else if('close' in ds)closeSheet();
+  else if('fab' in ds){const pid=S.view==='detail'?S.pid:'';openSheet(`<h2>무엇을 기록할까요?</h2>${pid?`<p class="sub">${esc(pname(pid))}에 기록돼요</p>`:''}<div style="margin-top:8px">${[['addmat','box','자재 구매','수량 · 단가 · 구매처'],['addwork','tool','작업 · 인건비','인원 · 일당 · 기타 비용'],['addcost','coin','기타 비용','이자 · 관리비 · 수수료 등'],...(pid?[]:[['newp','house','새 프로젝트','집 한 채를 새로 시작']])].map(([k,ic,l,s])=>`<button class="qa" data-${k}="${k==='newp'?'':esc(pid)}"><span class="ico">${icon(ic)}</span><span class="grow"><b>${l}</b><small>${s}</small></span>${icon('chev',18)}</button>`).join('')}</div><button class="btn" data-close style="width:100%;margin-top:14px">닫기</button>`)}
+  else if(ds.cost){costOne(ds.cost)}
+  else if(ds.cedit){const c=S.costs.find(x=>x.id===ds.cedit);if(c){if(c.kind==='work')wForm(c.pid,JSON.parse(JSON.stringify(c)));else if(c.cat==='자재비')mForm(c.pid,{...c});else cForm(c.pid,c.date,{...c})}}
+  else if(ds.cdel){if(S.armed!==ds.cdel){S.armed=ds.cdel;costOne(ds.cdel,1);return}S.armed=null;closeSheet();await del('costs',ds.cdel);toast('삭제했어요')}
   else if(ds.delcost){if(S.armed!==ds.delcost){S.armed=ds.delcost;render();return}S.armed=null;await del('costs',ds.delcost);toast('삭제했어요')}
   else if(ds.delp){if(S.armed!==ds.delp){S.armed=ds.delp;t.textContent='한 번 더 누르면 비용 기록까지 삭제돼요';return}const id=ds.delp;closeSheet();
     for(const c of S.costs.filter(c=>c.pid===id))await del('costs',c.id);await del('projects',id);S.view='home';render();toast('삭제했어요')}
