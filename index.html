@@ -109,6 +109,12 @@ details.rki .sub{margin:8px 0 0 18px;font-size:14px}details.rki .how{margin:6px 
 .simsvg{width:100%;height:70px;display:block;margin-top:8px}.simlab{position:relative;height:30px;font-size:11px;color:var(--amber)}.simlab span{position:absolute;transform:translateX(-50%);white-space:nowrap}.simlab .mk{color:var(--green);top:14px;font-weight:600}
 #sim-r{width:100%;height:36px;accent-color:var(--blue);margin:2px 0 0;padding:0;background:none;border:0}
 .chip.on{border-color:var(--blue);color:var(--blue);font-weight:600}
+.vwrap{overflow-x:auto;margin-top:6px}.vbars{display:flex;gap:6px;position:relative;min-width:100%;padding:0 2px}.vb{flex:1 0 36px;display:grid;grid-template-rows:18px 110px 18px;text-align:center}
+.vb .vt{font-size:11px;color:var(--mute);white-space:nowrap;align-self:end}.vb .va{display:flex;align-items:flex-end;justify-content:center}.vb .va i{display:block;width:70%;max-width:28px;background:var(--slate);border-radius:6px 6px 2px 2px}
+.vb .vl{font-size:11px;color:var(--mute);align-self:start;padding-top:3px}.vb.last .va i{background:var(--blue)}.vb.last .vt{color:var(--blue);font-weight:700}.vb.min .va i{background:var(--green)}.vb.min .vt{color:var(--green);font-weight:700}
+.avgl{position:absolute;left:0;right:0;border-top:1.5px dashed var(--amber);height:0;z-index:1;pointer-events:none}.avgl em{position:absolute;left:0;top:2px;font-style:normal;font-size:11px;color:var(--amber);background:var(--card);padding:0 3px}
+.hb{margin-top:10px}.ins{margin-top:10px}.ins .kv{font-size:14px;padding:8px 0}
+.tipbox{background:var(--soft);border-radius:14px;padding:12px 14px;margin-top:12px;font-size:14px;line-height:1.6}.tipbox b{display:block;font-size:14px}.tipbox.warn{background:color-mix(in srgb,var(--amber) 14%,var(--card))}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 .note{font-size:13px;color:var(--mute);margin:16px 4px;line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(10,12,16,.38);display:none;align-items:flex-end;justify-content:center;z-index:10}.sheet.open{display:flex}
@@ -421,17 +427,46 @@ function calv(){const now=new Date(),c=S.cal||(S.cal={y:now.getFullYear(),m:now.
   <div class="sec">${c.sel.slice(5).replace('-','월 ')}일${list.length?` · ${list.length}건 ${won(tot)}`:''}</div>
   <div class="card">${pe.map(p=>`<div class="li"><div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${p.buyDate===c.sel?'매입':'매도'}</div></div></div>`).join('')}${list.length?list.map(costRow).join(''):pe.length?'':'<div class="sub">이 날 기록이 없어요.</div>'}</div>
   <div class="three" style="margin-top:12px;grid-template-columns:repeat(3,minmax(0,1fr))"><button class="btn sm" data-addmat="" data-date="${c.sel}">자재</button><button class="btn sm" data-addwork="" data-date="${c.sel}">작업</button><button class="btn sm" data-addcost="" data-date="${c.sel}">기타 비용</button></div>`}
-function matList(){const m=mats();
-  return `${m.length?`<input id="m-search" type="search" placeholder="자재 검색" style="margin-top:14px" aria-label="자재 검색">`:''}
-  <div class="list" style="margin-top:14px">${m.length?m.map(x=>{const l=x.last,diff=l&&x.min?(+l.unitPrice-x.min):0,pts=[...x.a].filter(c=>+c.unitPrice>0).reverse().map(c=>({d:c.date,v:+c.unitPrice}));
-    const st={};for(const c of x.a)if(+c.unitPrice>0&&c.store&&(!st[c.store]||+c.unitPrice<st[c.store]))st[c.store]=+c.unitPrice;const best=Object.entries(st).sort((a,b)=>a[1]-b[1]);
-    return `<details class="card mat" data-name="${esc(x.n.toLowerCase())}"><summary class="row"><div class="ico">${icon('box')}</div><div class="grow"><div class="name">${esc(x.n)}</div><div class="sub">${x.a.length}번 구매 · 총 ${won(x.total)}</div></div><div style="text-align:right"><div class="amt" style="font-size:16px">${l?(+l.unitPrice).toLocaleString()+'원':'–'}</div><div class="sub">${l?'/'+esc(l.unit||'개')+' · 최근':''}</div></div></summary>
-    ${x.min?`<div class="mstat"><span>최저 <b>${x.min.toLocaleString()}</b></span><span>평균 <b>${Math.round(x.avg).toLocaleString()}</b></span><span>최고 <b>${x.max.toLocaleString()}</b></span></div>`:''}
-    ${pts.length>1?`<div style="margin-top:10px">${spark(pts)}</div>`:''}
-    ${best.length>1?`<div class="sub" style="margin-top:6px">가게별 최저: ${best.map(([s,v])=>esc(s)+' '+v.toLocaleString()+'원').join(' · ')}</div>`:''}
-    ${diff>0?`<div class="sub" style="margin-top:4px">최근 단가가 최저보다 ${diff.toLocaleString()}원 비싸요</div>`:''}
-    <div style="margin-top:8px">${x.a.map(c=>`<div class="li"><div class="grow"><div class="name" style="font-size:15px">${esc(c.store||'구매처 미입력')}</div><div class="sub">${esc(c.date||'')} · ${esc(pname(c.pid))}${c.qty?` · ${(+c.qty).toLocaleString()}${esc(c.unit||'')}`:''}</div></div><b style="white-space:nowrap">${c.unitPrice?(+c.unitPrice).toLocaleString()+'원':won(c.amount)}</b></div>`).join('')}</div>
-    <button class="btn sm" data-again="${esc(x.a[0].id)}" style="width:100%;margin-top:10px">같은 자재 다시 기록</button></details>`}).join(''):`<div class="card empty">아직 자재 기록이 없어요.<br>위 버튼으로 첫 구매를 기록해 보세요.</div>`}</div>`}
+const kshort=v=>{v=Math.round(+v||0);const a=Math.abs(v);return(v<0?'−':'')+(a>=1e8?(a/1e8).toFixed(1).replace(/\.0$/,'')+'억':a>=1e4?String(Math.round(a/1e3)/10).replace(/\.0$/,'')+'만':a.toLocaleString())};
+function vbars(rows,avg){const mx=Math.max(...rows.map(r=>r.v),1),H=110;
+  return `<div class="vwrap"><div class="vbars">${avg?`<i class="avgl" style="top:${18+H*(1-avg/mx)}px"><em>평균 ${kshort(avg)}</em></i>`:''}${rows.map(r=>`<div class="vb ${r.c||''}"><span class="vt">${r.t??kshort(r.v)}</span><span class="va"><i style="height:${Math.max(4,r.v/mx*100)}%"></i></span><span class="vl">${esc(r.l)}</span></div>`).join('')}</div></div>`}
+function hbars(rows){const mx=Math.max(...rows.map(r=>r.v),1);return rows.map(r=>`<div class="hb"><div class="row" style="justify-content:space-between;font-size:14px"><span>${r.l}</span><b>${r.t??won(r.v)}</b></div><div class="bar" style="margin-top:6px;height:7px"><i style="width:${Math.max(2,r.v/mx*100)}%;background:${r.col||'var(--amber)'}"></i></div></div>`).join('')}
+function matInfo(x){const buys=[...x.a].filter(c=>+c.unitPrice>0).sort((a,b)=>String(a.date).localeCompare(String(b.date))),units=uniq(x.a.map(c=>c.unit||'개'));
+  const first=buys[0],last=buys[buys.length-1],chg=first&&last&&buys.length>1?(+last.unitPrice-first.unitPrice)/first.unitPrice:null,vsAvg=last&&x.avg?(+last.unitPrice-x.avg)/x.avg:null;
+  const lost=buys.reduce((s,c)=>s+Math.max(0,+c.unitPrice-x.min)*(+c.qty||0),0);
+  const ds=uniq(buys.map(c=>c.date)).sort(),cyc=ds.length>1?Math.round(dd(day(ds[0]),day(ds[ds.length-1]))/(ds.length-1)):null;
+  const st={};for(const c of buys){const k=c.store||'구매처 미입력';(st[k]??={n:0,s:0,q:0,min:Infinity});st[k].n++;st[k].s+=+c.unitPrice;st[k].q+=+c.qty||0;st[k].min=Math.min(st[k].min,+c.unitPrice)}
+  const stores=Object.entries(st).map(([k,v])=>({k,avg:v.s/v.n,n:v.n,min:v.min})).sort((a,b)=>a.avg-b.avg);
+  const per={};for(const c of x.a)if(c.pid)per[c.pid]=(per[c.pid]||0)+(+c.qty||0);const pq=Object.entries(per).filter(([,q])=>q>0),avgQ=pq.length?pq.reduce((s,[,q])=>s+q,0)/pq.length:0;
+  let perPy=0;{let q=0,py=0;for(const [pid,qq] of pq){const p=S.projects.find(z=>z.id===pid);if(p&&+p.area){q+=qq;py+=+p.area/3.3058}}if(py)perPy=q/py}
+  return{buys,units,first,last,chg,vsAvg,lost,cyc,stores,avgQ,perPy,nProj:pq.length}}
+function matList(){const m=mats(),all=S.costs.filter(c=>c.cat==='자재비'),tot=all.reduce((s,c)=>s+(+c.amount||0),0),ym=iso(today()).slice(0,7),mon=all.filter(c=>String(c.date).startsWith(ym)).reduce((s,c)=>s+(+c.amount||0),0);
+  const top=[...m].sort((a,b)=>b.total-a.total).slice(0,5),up=m.map(x=>({x,i:matInfo(x)})).filter(o=>o.i.buys.length>1&&o.i.vsAvg>.05).sort((a,b)=>b.i.vsAvg-a.i.vsAvg);
+  const stT={};for(const c of all){const k=c.store||'구매처 미입력';stT[k]=(stT[k]||0)+(+c.amount||0)}const stores=Object.entries(stT).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const lostAll=m.reduce((s,x)=>s+matInfo(x).lost,0);
+  return `${m.length?`<div class="card" style="margin-top:14px"><div class="stats" style="margin:-4px 0 4px"><div class="stat" style="background:var(--soft)"><span>총 자재비</span><b>${won(tot)}</b></div><div class="stat" style="background:var(--soft)"><span>이번 달</span><b>${won(mon)}</b></div></div>
+   <div class="sub" style="margin:12px 2px 2px;font-weight:600;color:var(--ink)">많이 쓴 자재</div>${hbars(top.map(x=>({l:esc(x.n),v:x.total})))}
+   ${stores.length>1?`<div class="sub" style="margin:14px 2px 2px;font-weight:600;color:var(--ink)">가게별 지출</div>${hbars(stores.map(([k,v])=>({l:esc(k),v,col:'var(--blue)'})))}`:''}
+   ${up.length?`<div class="tipbox"><b>요즘 비싸게 산 자재</b>${up.slice(0,3).map(o=>`<div>${esc(o.x.n)} · 평균보다 <span class="dn">+${(o.i.vsAvg*100).toFixed(1)}%</span></div>`).join('')}</div>`:''}
+   ${lostAll>=1e4?`<div class="tipbox"><b>최저가로 샀다면 ${won(lostAll)} 아낄 수 있었어요</b>자재마다 가게별 최저가를 확인해 보세요.</div>`:''}</div>
+  <input id="m-search" type="search" placeholder="자재 검색" style="margin-top:14px" aria-label="자재 검색">`:''}
+  <div class="list" style="margin-top:14px">${m.length?m.map(x=>{const l=x.last,I=matInfo(x),u=I.units.length===1?I.units[0]:'';
+    const rows=I.buys.slice(-12).map(c=>({v:+c.unitPrice,l:String(c.date).slice(5).replace('-','/'),c:c===I.last?'last':+c.unitPrice===x.min?'min':''}));
+    return `<details class="card mat" data-name="${esc(x.n.toLowerCase())}"><summary class="row"><div class="ico">${icon('box')}</div><div class="grow"><div class="name">${esc(x.n)}</div><div class="sub">${x.a.length}번 구매 · 총 ${won(x.total)}${I.chg!=null?` · <span class="${I.chg>0?'dn':'up'}">${I.chg>0?'▲':'▼'} ${Math.abs(I.chg*100).toFixed(1)}%</span>`:''}</div></div><div style="text-align:right"><div class="amt" style="font-size:16px">${l?(+l.unitPrice).toLocaleString()+'원':'–'}</div><div class="sub">${l?'/'+esc(l.unit||'개')+' · 최근':''}</div></div></summary>
+    ${rows.length?`<div class="sub" style="margin:14px 2px 0">단가 변동${u?` (원/${esc(u)})`:''}</div>${vbars(rows,rows.length>1?x.avg:0)}<div class="lg" style="justify-content:flex-start;margin:6px 2px 0"><span><i style="background:var(--blue)"></i>최근</span><span><i style="background:var(--green)"></i>최저가</span></div>`:''}
+    ${I.units.length>1?`<div class="tipbox warn">단위가 섞여 있어요 (${I.units.map(esc).join(', ')}). 같은 단위끼리 비교해야 정확해요.</div>`:''}
+    <div class="ins">${[
+      x.min?['최저 · 평균 · 최고',`${x.min.toLocaleString()} · ${Math.round(x.avg).toLocaleString()} · ${x.max.toLocaleString()}`]:null,
+      I.chg!=null?['첫 구매 대비',`<span class="${I.chg>0?'dn':'up'}">${I.chg>0?'+':''}${(I.chg*100).toFixed(1)}%</span>`]:null,
+      I.vsAvg!=null&&I.buys.length>1?['최근 · 평균 대비',`<span class="${I.vsAvg>0?'dn':'up'}">${I.vsAvg>0?'+':''}${(I.vsAvg*100).toFixed(1)}%</span>`]:null,
+      I.cyc?['평균 구매 주기',`${I.cyc}일마다`]:null,
+      I.avgQ?['한 채당 평균 사용량',`${(Math.round(I.avgQ*10)/10).toLocaleString()}${esc(u)} (${I.nProj}채 기준)`]:null,
+      I.perPy?['평당 사용량 (전용)',`${I.perPy.toFixed(2)}${esc(u)}`]:null,
+      I.avgQ&&l?['다음 한 채 예상 비용',`약 ${won(I.avgQ*(+l.unitPrice))}`]:null,
+      I.lost>=1e3?['최저가였다면 아낄 금액',`<span class="dn">${won(I.lost)}</span>`]:null].filter(Boolean).map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+    ${I.stores.length>1?`<div class="sub" style="margin:12px 2px 2px">가게별 평균 단가 (싼 순)</div>${hbars(I.stores.map((s,i)=>({l:esc(s.k)+` · ${s.n}번`,v:s.avg,t:Math.round(s.avg).toLocaleString()+'원',col:i===0?'var(--green)':'var(--slate)'})))}`:''}
+    <div style="margin-top:10px">${x.a.map(c=>`<div class="li"><div class="grow"><div class="name" style="font-size:15px">${esc(c.store||'구매처 미입력')}</div><div class="sub">${esc(c.date||'')} · ${esc(pname(c.pid))}${c.qty?` · ${(+c.qty).toLocaleString()}${esc(c.unit||'')}`:''}</div></div><b style="white-space:nowrap">${c.unitPrice?(+c.unitPrice).toLocaleString()+'원':won(c.amount)}</b></div>`).join('')}</div>
+    <button class="btn sm" data-again="${esc(x.a[0].id)}" style="width:100%;margin-top:10px">같은 자재 다시 기록</button></details>`}).join(''):`<div class="card empty">아직 자재 기록이 없어요.<br>+ 기록 버튼으로 첫 구매를 기록해 보세요.</div>`}</div>`}
 function workList(){const w=works();
   return `${w.length?`<input id="m-search" type="search" placeholder="작업 검색" style="margin-top:14px" aria-label="작업 검색">`:''}
   <div class="list" style="margin-top:14px">${w.length?w.map(x=>{const rates={};for(const c of [...x.a].reverse())for(const k of c.workers||[])if(k.name&&+k.rate)(rates[k.name]??=[]).push(+k.rate);
